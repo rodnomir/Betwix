@@ -9,7 +9,7 @@ export default function MainLayout() {
           padding: 20,
           display: "flex",
           gap: 16,
-          borderBottom: "1px solid #ddd",
+          borderBottom: "1px solid #E5E7EB",
         }}
       >
         <Link to="/">Home</Link>

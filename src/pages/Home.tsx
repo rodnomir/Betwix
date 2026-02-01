@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Star, Home, Building, Briefcase, Store, Warehouse } from "lucide-react";
+import { Star, Home, Building, Briefcase, Store, Warehouse, Menu, User } from "lucide-react";
 
 /**
  * Betwix — Главная Страница Лотов (MVP)
@@ -229,7 +229,7 @@ function progressPct(collected: number, target: number) {
 // -----------------------------
 
 const Footer = () => (
-  <footer className="mt-12 border-t bg-white">
+  <footer className="mt-12 border-t border-[#E5E7EB] bg-white">
     <div className="mx-auto max-w-7xl px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-8 text-sm">
       <div>
         <img src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 40'%3E%3Cg fill='%230F2A44'%3E%3Cpath d='M20 4L36 20L20 36L4 20Z'/%3E%3Cpath d='M36 4L52 20L36 36L20 20Z' opacity='0.85'/%3E%3Ctext x='70' y='28' font-family='Inter, system-ui, -apple-system' font-size='22' font-weight='700' letter-spacing='2'%3EBETWIX%3C/text%3E%3C/g%3E%3C/svg%3E" alt="Betwix" className="h-8 mb-2" />
@@ -268,7 +268,7 @@ const Footer = () => (
         </ul>
       </div>
     </div>
-    <div className="border-t py-4 text-center text-xs text-slate-400">© 2026 Betwix. Все права защищены</div>
+    <div className="border-t border-[#E5E7EB] py-4 text-center text-xs text-slate-400">© 2026 Betwix. Все права защищены</div>
   </footer>
 );
 
@@ -358,8 +358,8 @@ export default function BetwixMarketplacePage() {
     <div className="flex items-center gap-1 text-sm font-medium text-slate-600">
       <span>{label}</span>
       {hint && (
-        <span className="relative group inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-400 text-[11px] text-white leading-none cursor-help">ℹ
-          <span className="pointer-events-none absolute top-full left-1/2 z-50 mt-2 w-[180px] whitespace-normal -translate-x-1/2 rounded-md border bg-white px-3 py-2 inline-block text-[12px] text-slate-500 shadow opacity-0 transition-opacity group-hover:opacity-100">
+        <span className="relative group inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#D1D5DB] text-[11px] text-white leading-none cursor-help">ℹ
+          <span className="pointer-events-none absolute top-full left-1/2 z-50 mt-2 w-[180px] whitespace-normal -translate-x-1/2 rounded-md border border-[#E5E7EB] bg-white px-3 py-2 inline-block text-[12px] text-slate-500 shadow opacity-0 transition-opacity group-hover:opacity-100">
             {hint}
           </span>
         </span>
@@ -368,56 +368,60 @@ export default function BetwixMarketplacePage() {
   );
 
   const regionBtnClass = (active: boolean) =>
-    "rounded-full px-4 py-2 transition-colors " +
+    "rounded-full px-4 py-2 text-sm font-medium transition-colors " +
     (active ? "bg-slate-100 text-slate-700" : "text-slate-700 hover:bg-slate-50");
 
   const countryBtnClass = (active: boolean) =>
-    "inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm transition-colors " +
+    "inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium transition-colors " +
     (active ? "bg-slate-100 text-slate-700" : "text-slate-600 hover:bg-slate-50");
 
   return (
     <div className="min-h-screen bg-[#FEFEFF]">
       {/* Header */}
-      <header className="border-b bg-white sticky top-0 z-50">
-  <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-    <div className="flex items-center gap-3">
-      <img
-        src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 40'%3E%3Cg fill='%230F2A44'%3E%3Cpath d='M20 4L36 20L20 36L4 20Z'/%3E%3Cpath d='M36 4L52 20L36 36L20 20Z' opacity='0.85'/%3E%3Ctext x='70' y='28' font-family='Inter, system-ui, -apple-system' font-size='22' font-weight='700' letter-spacing='2'%3EBETWIX%3C/text%3E%3C/g%3E%3C/svg%3E"
-        alt="Betwix"
-        className="h-8"
-      />
-    </div>
+      <header className="border-b border-[#E5E7EB] bg-white sticky top-0 z-50">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+          <div className="flex items-center gap-2">
+            <img
+              src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40'%3E%3Cpath d='M20 4L36 20L20 36L4 20Z' fill='%231A2C42'/%3E%3Cpath d='M36 4L52 20L36 36L20 20Z' fill='%234A6B8F'/%3E%3Ctext x='60' y='28' font-family='Inter, system-ui, sans-serif' font-size='20' font-weight='600' letter-spacing='0.05em' fill='%231A2C42'%3EBETWIX%3C/text%3E%3C/svg%3E"
+              alt="Betwix"
+              className="h-8"
+            />
+          </div>
 
-    <nav className="hidden md:flex items-center gap-10">
-      <div className="flex items-center gap-6">
-        <button className="relative font-medium text-slate-900 pb-1">
-          Лоты
-          <span className="absolute left-0 -bottom-0.5 h-0.5 w-full bg-blue-500 rounded-full transition-all duration-200" />
-        </button>
-        <button className="relative pb-1 text-slate-500 hover:text-slate-900 group">
-          P2P рынок
-          <span className="absolute left-1/2 -bottom-0.5 h-0.5 w-0 bg-blue-500 rounded-full transition-all duration-200 group-hover:left-0 group-hover:w-full" />
-        </button>
-      </div>
-      
-    </nav>
+          <nav className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
+            <button className="relative font-medium text-[#1A2C42] pb-1">
+              Лоты
+              <span className="absolute left-0 -bottom-0.5 h-0.5 w-full bg-blue-500 rounded-full" />
+            </button>
+            <button className="group relative font-medium text-[#6B7280] pb-1 transition-colors hover:text-[#1A2C42]">
+              P2P рынок
+              <span className="absolute left-1/2 -translate-x-1/2 -bottom-0.5 h-0.5 w-0 rounded-full bg-blue-500 transition-all duration-200 ease-out group-hover:w-full group-hover:left-0 group-hover:translate-x-0" />
+            </button>
+          </nav>
 
-    <div className="flex items-center gap-3">
-      <Button className="rounded-full px-6 bg-blue-500 text-white hover:bg-blue-600">Вход</Button>
-      <div className="flex items-center gap-1 rounded-full border p-1">
-        <button className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-slate-100">☰</button>
-        <button className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-slate-100">👤</button>
-      </div>
-    </div>
-  </div>
-</header>
+          <div className="flex items-center gap-4">
+            <button className="rounded-full px-5 py-2 text-sm font-medium text-white bg-[#2A7FF7] hover:bg-[#2563eb] transition-colors">
+              Вход
+            </button>
+            <div className="inline-flex items-center rounded-full border border-[#D1D5DB] bg-white pl-3 pr-2 py-2 gap-2">
+              <button className="flex items-center justify-center text-[#374151] hover:text-[#1A2C42]">
+                <Menu className="h-5 w-5" />
+              </button>
+              <div className="w-px h-5 bg-[#E5E7EB]" aria-hidden />
+              <button className="flex items-center justify-center text-[#4A6B8F] hover:text-[#1A2C42]">
+                <User className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
 
       {/* Data source switch */}
       <div className="mx-auto max-w-7xl px-4 mt-3">
-        <div className="inline-flex rounded-full border bg-white p-1 text-sm">
-          <button onClick={() => setDataSource("aggregated")} className={`px-3 py-1 rounded-full ${dataSource === "aggregated" ? "bg-blue-500 text-white" : "text-slate-600"}`}>Aggregated</button>
-          <button onClick={() => setDataSource("reit")} className={`px-3 py-1 rounded-full ${dataSource === "reit" ? "bg-blue-500 text-white" : "text-slate-600"}`}>REIT</button>
-          <button onClick={() => setDataSource("rent")} className={`px-3 py-1 rounded-full ${dataSource === "rent" ? "bg-blue-500 text-white" : "text-slate-600"}`}>Rent</button>
+        <div className="inline-flex rounded-full border border-[#DDE2E8] bg-white p-1 text-sm">
+          <button onClick={() => setDataSource("aggregated")} className={`px-3 py-1 rounded-full text-sm font-medium ${dataSource === "aggregated" ? "bg-[#1877F2] text-white" : "text-[#6B7280]"}`}>Aggregated</button>
+          <button onClick={() => setDataSource("reit")} className={`px-3 py-1 rounded-full text-sm font-medium ${dataSource === "reit" ? "bg-[#1877F2] text-white" : "text-[#6B7280]"}`}>REIT</button>
+          <button onClick={() => setDataSource("rent")} className={`px-3 py-1 rounded-full text-sm font-medium ${dataSource === "rent" ? "bg-[#1877F2] text-white" : "text-[#6B7280]"}`}>Rent</button>
         </div>
       </div>
 
@@ -548,15 +552,15 @@ export default function BetwixMarketplacePage() {
 
           const d = { ...base, infl };
 
-          const deltaColor = (d: string) => d.includes("▼") ? "text-rose-600" : d.includes("▲") ? "text-emerald-600" : "text-slate-500";
+          const deltaColor = (d: string) => d.includes("▼") ? "text-[#EF4444]" : d.includes("▲") ? "text-[#10B981]" : "text-[#6B7280]";
 
           const Block = ({ title, value, coeff, delta, note, tooltip }: any) => (
-            <Card className="rounded-xl bg-white transition-all hover:border-blue-500 shadow-md hover:shadow-lg">
+            <Card className="card-market-hover rounded-xl bg-white shadow-md transition-all hover:shadow-lg">
               <CardHeader className="pb-1">
-                <CardTitle className="flex items-center gap-1 text-sm text-slate-500">
+                <CardTitle className="flex items-center gap-1 text-sm text-[#6B7280]">
                   {title}
-                  <span className="relative group inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-400 text-[10px] text-white">?
-                    <span className="pointer-events-none absolute top-full left-1/2 z-50 mt-2 w-[380px] whitespace-normal -translate-x-1/2 rounded-lg border bg-white px-4 py-3 inline-block text-[13px] text-slate-500 shadow-lg opacity-0 transition-opacity group-hover:opacity-100">
+                  <span className="relative group inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#D1D5DB] text-[10px] text-white">?
+                    <span className="pointer-events-none absolute top-full left-1/2 z-50 mt-2 w-[380px] whitespace-normal -translate-x-1/2 rounded-lg border border-[#E5E7EB] bg-white px-4 py-3 inline-block text-[13px] text-slate-500 shadow-lg opacity-0 transition-opacity group-hover:opacity-100">
                       {tooltip}
                     </span>
                   </span>
@@ -604,17 +608,15 @@ export default function BetwixMarketplacePage() {
           }
         `}</style>
         <div className="mt-3 overflow-hidden rounded-xl border bg-slate-50">
-          <div className="relative overflow-hidden">
-            <div className="whitespace-nowrap flex animate-marquee gap-12 px-4 py-2 text-sm text-slate-600">
+          <div className="relative overflow-hidden py-2">
+            <div className="whitespace-nowrap flex animate-marquee gap-12 px-4 text-sm text-[#374151]">
               <div className="flex gap-12">
-                <span className="cursor-pointer transition-colors hover:text-blue-600 hover:underline">$1</span>
                 <span className="cursor-pointer transition-colors hover:text-blue-600 hover:underline">🇺🇸 США: vacancy rate снизился до 6.1%</span>
                 <span className="cursor-pointer transition-colors hover:text-blue-600 hover:underline">🇯🇵 Япония: спрос на офисы в Токио растёт</span>
                 <span className="cursor-pointer transition-colors hover:text-blue-600 hover:underline">🇦🇪 Дубай: коммерческая недвижимость +5.4%</span>
                 <span className="cursor-pointer transition-colors hover:text-blue-600 hover:underline">🌍 Global: real estate inflow $18B за квартал</span>
               </div>
               <div className="flex gap-12" aria-hidden="true">
-                <span className="cursor-pointer transition-colors hover:text-blue-600 hover:underline">$1</span>
                 <span className="cursor-pointer transition-colors hover:text-blue-600 hover:underline">🇺🇸 США: vacancy rate снизился до 6.1%</span>
                 <span className="cursor-pointer transition-colors hover:text-blue-600 hover:underline">🇯🇵 Япония: спрос на офисы в Токио растёт</span>
                 <span className="cursor-pointer transition-colors hover:text-blue-600 hover:underline">🇦🇪 Дубай: коммерческая недвижимость +5.4%</span>
@@ -625,28 +627,21 @@ export default function BetwixMarketplacePage() {
         </div>
 
         {/* Region tabs */}
-        <div className="mt-4 flex items-center gap-2">
-  <div className="flex flex-wrap items-center gap-2">
-    <button type="button" className={regionBtnClass(regionFilter === "all")} onClick={() => { setRegionFilter("all"); setCountryFilter("all"); setShowAllCountries(false); }}>Все регионы</button>
-    <button type="button" className={regionBtnClass(regionFilter === "Europe")} onClick={() => { setRegionFilter("Europe"); setCountryFilter("all"); setShowAllCountries(false); }}>Европа</button>
-    <button type="button" className={regionBtnClass(regionFilter === "USA")} onClick={() => { setRegionFilter("USA"); setCountryFilter("all"); setShowAllCountries(false); }}>США</button>
-    <button type="button" className={regionBtnClass(regionFilter === "Asia")} onClick={() => { setRegionFilter("Asia"); setCountryFilter("all"); setShowAllCountries(false); }}>Азия</button>
-    <button type="button" className={regionBtnClass(regionFilter === "MiddleEast")} onClick={() => { setRegionFilter("MiddleEast"); setCountryFilter("all"); setShowAllCountries(false); }}>Восток</button>
-    <button type="button" className={regionBtnClass(regionFilter === "LatAm")} onClick={() => { setRegionFilter("LatAm"); setCountryFilter("all"); setShowAllCountries(false); }}>LatAm</button>
-    <button type="button" className={regionBtnClass(regionFilter === "CIS")} onClick={() => { setRegionFilter("CIS"); setCountryFilter("all"); setShowAllCountries(false); }}>СНГ</button>
-  </div>
-
-  <div className="ml-auto">
-    <button
-      type="button"
-      onClick={() => setCompactView(v => !v)}
-      className="inline-flex items-center gap-1 rounded-full px-4 py-2 text-slate-700 hover:bg-slate-50"
-    >
-      <span>{compactView ? "Расширить" : "Свернуть"}</span>
-      <span className="text-slate-400">▾</span>
-    </button>
-  </div>
-</div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="inline-flex flex-wrap items-center gap-2">
+            <button type="button" className={regionBtnClass(regionFilter === "all")} onClick={() => { setRegionFilter("all"); setCountryFilter("all"); setShowAllCountries(false); }}>Все регионы</button>
+            <button type="button" className={regionBtnClass(regionFilter === "Europe")} onClick={() => { setRegionFilter("Europe"); setCountryFilter("all"); setShowAllCountries(false); }}>Европа</button>
+            <button type="button" className={regionBtnClass(regionFilter === "USA")} onClick={() => { setRegionFilter("USA"); setCountryFilter("all"); setShowAllCountries(false); }}>США</button>
+            <button type="button" className={regionBtnClass(regionFilter === "Asia")} onClick={() => { setRegionFilter("Asia"); setCountryFilter("all"); setShowAllCountries(false); }}>Азия</button>
+            <button type="button" className={regionBtnClass(regionFilter === "MiddleEast")} onClick={() => { setRegionFilter("MiddleEast"); setCountryFilter("all"); setShowAllCountries(false); }}>Восток</button>
+            <button type="button" className={regionBtnClass(regionFilter === "LatAm")} onClick={() => { setRegionFilter("LatAm"); setCountryFilter("all"); setShowAllCountries(false); }}>LatAm</button>
+            <button type="button" className={regionBtnClass(regionFilter === "CIS")} onClick={() => { setRegionFilter("CIS"); setCountryFilter("all"); setShowAllCountries(false); }}>СНГ</button>
+          </div>
+          <button type="button" onClick={() => setCompactView(v => !v)} className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium text-[#374151] hover:border-[#D1D5DB] hover:bg-slate-50">
+            <span>{compactView ? "Расширить" : "Свернуть"}</span>
+            <span className="text-[#9CA3AF]">▾</span>
+          </button>
+        </div>
 
         {/* Countries row (only when region selected) */}
         {regionFilter !== "all" && (
@@ -676,7 +671,7 @@ export default function BetwixMarketplacePage() {
                 </button>
 
                 {showAllCountries && (
-                  <div className="absolute left-0 top-full z-30 mt-2 w-64 rounded-xl border bg-white p-2 shadow-lg">
+                  <div className="absolute left-0 top-full z-30 mt-2 w-64 rounded-xl border border-[#E5E7EB] bg-white p-2 shadow-lg">
                     <div className="flex flex-col gap-1">
                       {moreCountries.map((c) => (
                         <button
@@ -707,39 +702,39 @@ export default function BetwixMarketplacePage() {
 
 
         {/* Table */}
-        <div className="mt-5 overflow-hidden rounded-xl border">
+        <div className="mt-5 overflow-hidden rounded-xl border bg-white">
           <Table>
             <TableHeader>
               <TableRow className="bg-white">
                 <TableHead className="w-[36px]"></TableHead>
                 <TableHead className="w-[36px]">#</TableHead>
                 <TableHead className="w-[90px]">
-                  <button type="button" onClick={() => handleSort("title")} className="hover:text-slate-900">
+                  <button type="button" onClick={() => handleSort("title")} className="text-slate-600 hover:text-slate-900">
                     Тип
                   </button>
                 </TableHead>
                 <TableHead className="w-[150px]">
-                  <button type="button" onClick={() => handleSort("country")} className="hover:text-slate-900">
+                  <button type="button" onClick={() => handleSort("country")} className="text-slate-600 hover:text-slate-900">
                     Локация
                   </button>
                 </TableHead>
                 <TableHead className="w-[90px] text-center">
-                  <button type="button" onClick={() => handleSort("rentYearly")} className="hover:text-slate-900">
+                  <button type="button" onClick={() => handleSort("rentYearly")} className="text-slate-600 hover:text-slate-900">
                     {th("Доходность", "Примерная годовая доходность от аренды по отношению к стоимости объекта")}
                   </button>
                 </TableHead>
                 <TableHead className="w-[70px] text-center">
-                  <button type="button" onClick={() => handleSort("salePercent")} className="hover:text-slate-900">
+                  <button type="button" onClick={() => handleSort("salePercent")} className="text-slate-600 hover:text-slate-900">
                     {th("Риск", "Оценка риска инвестиций: учитывает стабильность аренды и рыночные факторы")}
                   </button>
                 </TableHead>
                 <TableHead className="w-[140px]">
-                  <button type="button" onClick={() => handleSort("businessValue")} className="hover:text-slate-900">
+                  <button type="button" onClick={() => handleSort("businessValue")} className="text-slate-600 hover:text-slate-900">
                     {th("Стоимость", "Оценка полной стоимости объекта и его арендного бизнеса")}
                   </button>
                 </TableHead>
                 <TableHead className="w-[90px]">
-                  <button type="button" onClick={() => handleSort("minTicket")} className="hover:text-slate-900">
+                  <button type="button" onClick={() => handleSort("minTicket")} className="text-slate-600 hover:text-slate-900">
                     {th("Мин", "Минимальная сумма, с которой можно инвестировать в этот объект")}
                   </button>
                 </TableHead>
@@ -749,7 +744,7 @@ export default function BetwixMarketplacePage() {
                 {!compactView && <TableHead className="w-[70px]">{th("ROI", "Итоговая ожидаемая доходность инвестиций в процентах")}</TableHead>}
                 {!compactView && <TableHead className="w-[70px]">{th("Доля", "Какую часть будущего арендного дохода владелец продаёт инвесторам")}</TableHead>}
                 <TableHead>
-                  <button type="button" onClick={() => handleSort("raiseCollected")} className="hover:text-slate-900">
+                  <button type="button" onClick={() => handleSort("raiseCollected")} className="text-slate-600 hover:text-slate-900">
                     {th("Сбор", "Сколько средств уже собрано и сколько осталось до цели")}
                   </button>
                 </TableHead>
@@ -769,32 +764,32 @@ export default function BetwixMarketplacePage() {
                   const pct = progressPct(l.raiseCollected, l.raiseTarget);
                   const yieldPct = ((l.rentYearly / l.businessValue) * 100).toFixed(1);
                   return (
-                    <TableRow key={l.id} className="hover:bg-slate-50 h-10">
-                      <TableCell className="w-[48px] py-1">
-                        <button className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-slate-100">
+                    <TableRow key={l.id}>
+                      <TableCell className="w-[36px] py-1">
+                        <button className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-slate-100">
                           <Star className="h-4 w-4 text-slate-500" />
                         </button>
                       </TableCell>
-                      <TableCell className="py-1 text-slate-500 text-sm">{index + 1}</TableCell>
-                      <TableCell className="py-1 w-[90px] text-slate-700">
+                      <TableCell className="w-[36px] py-1 text-sm font-normal text-slate-500">{index + 1}</TableCell>
+                      <TableCell className="w-[90px] py-1">
   <div className="flex items-center gap-1">
-    {l.title === "Жилая" && <Home className="h-4 w-4 text-slate-500" />}
-    {l.title === "Коммерческая" && <Building className="h-4 w-4 text-slate-500" />}
-    {l.title === "Офисная" && <Briefcase className="h-4 w-4 text-slate-500" />}
-    {l.title === "Торговая" && <Store className="h-4 w-4 text-slate-500" />}
-    {l.title === "Склады" && <Warehouse className="h-4 w-4 text-slate-500" />}
-    {l.title === "Бизнес" && <Building className="h-4 w-4 text-slate-500" />}
-    <span>{l.title}</span>
+    {l.title === "Жилая" && <Home className="h-4 w-4 text-slate-500 shrink-0" />}
+    {l.title === "Коммерческая" && <Building className="h-4 w-4 text-slate-500 shrink-0" />}
+    {l.title === "Офисная" && <Briefcase className="h-4 w-4 text-slate-500 shrink-0" />}
+    {l.title === "Торговая" && <Store className="h-4 w-4 text-slate-500 shrink-0" />}
+    {l.title === "Склады" && <Warehouse className="h-4 w-4 text-slate-500 shrink-0" />}
+    {l.title === "Бизнес" && <Building className="h-4 w-4 text-slate-500 shrink-0" />}
+    <span className="text-sm font-normal text-slate-700">{l.title}</span>
   </div>
 </TableCell>
-                      <TableCell className="py-1 w-[150px]">
+                      <TableCell className="w-[150px] py-1">
   <div className="flex flex-col leading-tight">
-    <div className="flex items-center gap-1 text-slate-800">
-      <span className="text-base">{FLAG_MAP[l.country] ?? "🏳️"}</span>
+    <div className="flex items-center gap-1 text-sm font-normal text-slate-800">
+      <span>{FLAG_MAP[l.country] ?? "🏳️"}</span>
       <span>{l.country}</span>
     </div>
-    <div className="flex items-center gap-1 text-xs text-slate-500">
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5s-3 1.343-3 3 1.343 3 3 3z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.5 10.5c0 7.5-7.5 11-7.5 11s-7.5-3.5-7.5-11a7.5 7.5 0 1115 0z" /></svg>
+    <div className="flex items-center gap-1 text-xs font-normal text-slate-500">
+      <span>📍</span>
       <span>{l.city}</span>
     </div>
   </div>
@@ -803,15 +798,15 @@ export default function BetwixMarketplacePage() {
                       
 
                       {/* Доходность */}
-                      <TableCell className="py-1 text-center whitespace-nowrap">
+                      <TableCell className="w-[90px] py-1 text-center whitespace-nowrap">
                         <div className="flex flex-col items-center leading-tight">
-                          <span className="text-emerald-600 font-medium">{yieldPct}%</span>
-                          <span className="text-[11px] text-slate-400">годовых</span>
+                          <span className="text-sm font-normal text-emerald-600">{yieldPct}%</span>
+                          <span className="text-[11px] font-normal text-slate-400">годовых</span>
                         </div>
                       </TableCell>
 
                       {/* Риск */}
-                      <TableCell className="py-1 text-center whitespace-nowrap">
+                      <TableCell className="w-[70px] py-1 text-center whitespace-nowrap">
                         {(() => {
                           const coeff = 1 + l.salePercent / 100;
 
@@ -820,19 +815,19 @@ export default function BetwixMarketplacePage() {
 
                           if (coeff >= riskStats.max * 0.9) {
                             arrow = "▲";
-                            color = "text-rose-600"; // близко к максимуму
+                            color = "text-rose-600";
                           } else if (coeff > riskStats.avg) {
                             arrow = "▲";
-                            color = "text-yellow-500"; // выше среднего
+                            color = "text-yellow-500";
                           } else {
                             arrow = "▼";
-                            color = "text-emerald-600"; // средний или ниже
+                            color = "text-emerald-600";
                           }
 
                           return (
-                            <span className="inline-flex flex-col items-center leading-tight font-medium">
-                              <span className="text-base text-slate-900">{Math.round((coeff / riskStats.max) * 100)}%</span>
-                              <span className={`inline-flex items-center gap-1 text-xs ${color}`}>
+                            <span className="inline-flex flex-col items-center leading-tight">
+                              <span className="text-base font-medium text-slate-900">{Math.round((coeff / riskStats.max) * 100)}%</span>
+                              <span className={`inline-flex items-center gap-1 text-xs font-normal ${color}`}>
                                 <span>{arrow}</span>
                                 <span>{coeff.toFixed(3).replace('.', ',')}</span>
                                 <span className="text-slate-400">Kr</span>
@@ -843,32 +838,32 @@ export default function BetwixMarketplacePage() {
                       </TableCell>
 
                       {/* Стоимость + аренда/мес */}
-                      <TableCell className="py-1">
+                      <TableCell className="w-[140px] py-1">
                         <div className="flex flex-col leading-tight">
-                          <span className="text-slate-900">${formatMoney(l.businessValue)}</span>
-                          <span className="mt-0.5 text-xs text-slate-500">${formatMoney(l.rentMonthly)} / мес</span>
+                          <span className="text-sm font-normal text-slate-700">${formatMoney(l.businessValue)}</span>
+                          <span className="mt-0.5 text-xs font-normal text-slate-500">${formatMoney(l.rentMonthly)} / мес</span>
                         </div>
                       </TableCell>
 
                       {/* Мин */}
-                      <TableCell className="py-1 whitespace-nowrap">${formatMoney(l.minTicket)}</TableCell>
+                      <TableCell className="w-[90px] py-1 whitespace-nowrap text-sm font-normal text-slate-700">${formatMoney(l.minTicket)}</TableCell>
 
-                      {!compactView && <TableCell className="py-1 text-slate-700">2.5%</TableCell>}
-                      {!compactView && <TableCell className="py-1 text-slate-700">6.0%</TableCell>}
-                      {!compactView && <TableCell className="py-1 font-medium text-slate-900">12%</TableCell>}
-                      {!compactView && <TableCell className="py-1 text-slate-700">{45 + Math.floor(Math.random() * 41)}%</TableCell>}
+                      {!compactView && <TableCell className="w-[90px] py-1 text-sm font-normal text-slate-900">2.5%</TableCell>}
+                      {!compactView && <TableCell className="w-[90px] py-1 text-sm font-normal text-slate-900">6.0%</TableCell>}
+                      {!compactView && <TableCell className="w-[70px] py-1 text-sm font-normal text-slate-900">12%</TableCell>}
+                      {!compactView && <TableCell className="w-[70px] py-1 text-sm font-normal text-slate-900">{45 + Math.floor(Math.random() * 41)}%</TableCell>}
 
                       {/* Сбор */}
                       <TableCell className="py-1">
                         <div className="min-w-[160px]">
-                          <div className="flex items-center justify-between text-xs text-slate-600">
-                            <span>{Math.round(pct)}%</span>
-                            <span className="text-slate-400">осталось {formatMoney(l.raiseTarget - l.raiseCollected)}</span>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-normal text-slate-600">{Math.round(pct)}%</span>
+                            <span className="font-normal text-slate-400">осталось {formatMoney(l.raiseTarget - l.raiseCollected)}</span>
                           </div>
                           <div className="mt-0.5 h-1.5 w-full rounded-full bg-slate-100">
                             <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${pct}%` }} />
                           </div>
-                          <div className="mt-1 text-[11px] text-slate-400">{l.daysLeft} дней</div>
+                          <div className="mt-1 text-xs font-normal text-slate-400">{l.daysLeft} дней</div>
                         </div>
                       </TableCell>
 
@@ -877,7 +872,7 @@ export default function BetwixMarketplacePage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-6 rounded-full px-2 text-xs text-blue-500 border-blue-500 hover:bg-transparent shadow-none"
+                          className="btn-invest h-6 rounded-full px-2 text-xs text-blue-500 border-blue-500 hover:bg-transparent hover:underline shadow-none"
                         >
                           Инвестировать
                         </Button>

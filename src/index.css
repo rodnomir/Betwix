@@ -2,4 +2,35 @@
 
 html, body, #root {
   height: 100%;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Светло-серые рамки — переопределяем чёрные по умолчанию */
+#root,
+#root *,
+#root *::before,
+#root *::after {
+  border-color: #E5E7EB;
+}
+
+/* Карточки маркетов: синяя рамка при наведении */
+#root .card-market-hover:hover {
+  border-color: rgb(59 130 246) !important;
+}
+
+/* Кнопка Инвестировать — minimal outline */
+#root .btn-invest {
+  height: 24px !important;
+  padding: 0 8px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  background-color: transparent !important;
+  border: 1px solid rgb(59 130 246) !important;
+  color: rgb(59 130 246) !important;
+  border-radius: 9999px !important;
+  box-shadow: none !important;
+}
+#root .btn-invest:hover {
+  background-color: transparent !important;
+  text-decoration: underline;
 }

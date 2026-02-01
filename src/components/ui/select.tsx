@@ -13,7 +13,7 @@ const SelectTrigger = React.forwardRef<
 >(({ className = "", ...props }, ref) => (
   <button
     ref={ref}
-    className={`flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ${className}`}
+    className={`flex h-10 w-full items-center justify-between rounded-md border border-[#DDE2E8] bg-white px-3 py-2 text-sm ${className}`}
     {...props}
   />
 ));

@@ -13,7 +13,7 @@ export default function App() {
         {/* NAVIGATION — ВСЕГДА ВИДНА */}
         <header
           style={{
-            borderBottom: "1px solid #eee",
+            borderBottom: "1px solid #E5E7EB",
             padding: "12px 24px",
             display: "flex",
             gap: 16,
