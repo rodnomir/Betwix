@@ -10,9 +10,9 @@ import ObjectPage from "./pages/ObjectPage";
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen flex-col bg-[#FEFEFF]">
+      <div className="flex flex-col bg-[#FEFEFF]">
         <Header />
-        <main className="flex-1 pt-2 pb-6 min-h-0">
+        <main className="pt-2 pb-6">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/p2p" element={<Marketplace />} />

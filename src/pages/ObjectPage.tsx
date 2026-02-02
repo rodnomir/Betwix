@@ -44,7 +44,7 @@ function generateYieldData(listing: Listing, rentYear: number): YieldYearData[] 
 function Header() {
   return (
     <div className="sticky top-0 z-50 border-b px-8 py-4 bg-background">
-      <div className="max-w-[1600px] mx-auto flex justify-between items-center">
+      <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div className="flex items-center gap-3">
           <img
             src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 40'%3E%3Cg fill='%230F2A44'%3E%3Cpath d='M20 4L36 20L20 36L4 20Z'/%3E%3Cpath d='M36 4L52 20L36 36L20 20Z' opacity='0.85'/%3E%3Ctext x='70' y='28' font-family='Inter, system-ui, -apple-system' font-size='22' font-weight='700' letter-spacing='2'%3EBETWIX%3C/text%3E%3C/g%3E%3C/svg%3E"
@@ -114,8 +114,8 @@ function ObjectPage() {
       : 0;
 
   return (
-    <div className="flex min-h-full flex-col bg-background">
-      <div className="max-w-[1600px] mx-auto grid grid-cols-12 w-full min-h-[calc(100vh-8rem)]">
+    <div className="flex flex-col bg-background">
+      <div className="max-w-7xl mx-auto grid grid-cols-12 w-full">
         <LeftSidebar
           listing={listing}
           occupancyRate={OCCUPANCY_RATE}
@@ -149,8 +149,8 @@ function ObjectPage() {
 
 function Footer() {
   return (
-    <footer className="border-t bg-white w-full mt-8">
-      <div className="max-w-[1600px] mx-auto px-8 py-6 grid grid-cols-1 md:grid-cols-4 gap-8 text-sm">
+    <footer className="border-t bg-background w-full mt-12">
+      <div className="max-w-7xl mx-auto px-8 py-6 grid grid-cols-1 md:grid-cols-4 gap-8 text-sm">
         <div className="space-y-3">
           <img
             src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 40'%3E%3Cg fill='%230F2A44'%3E%3Cpath d='M20 4L36 20L20 36L4 20Z'/%3E%3Cpath d='M36 4L52 20L36 36L20 20Z' opacity='0.85'/%3E%3Ctext x='70' y='28' font-family='Inter, system-ui, -apple-system' font-size='22' font-weight='700' letter-spacing='2'%3EBETWIX%3C/text%3E%3C/g%3E%3C/svg%3E"
@@ -262,7 +262,7 @@ function LeftSidebar(props: {
       subRatings.condition + subRatings.prepay + subRatings.contract) / 7;
 
   return (
-    <div className="col-span-3 px-6 py-6 border-r space-y-8 relative min-h-[1500px]">
+    <div className="col-span-3 px-6 py-6 border-r space-y-8 relative">
       <section className="space-y-4">
         <div className="text-xs font-semibold text-muted-foreground uppercase">Владелец объекта</div>
         <div className="flex items-center gap-4">
@@ -391,7 +391,7 @@ function CenterContent(props: {
   >("graph");
 
   return (
-    <div className="col-span-6 min-h-0 overflow-visible px-4 py-6 border-r">
+    <div className="col-span-6 px-4 py-6 border-r space-y-10">
       <nav className="sticky top-0 bg-background z-10 border-b pb-2 mb-6">
         <div className="flex gap-6 text-sm">
           {[
@@ -417,11 +417,23 @@ function CenterContent(props: {
 
       <div className="animate-in fade-in slide-in-from-top-2 duration-200">
         {activeTab === "graph" && (
-          <YieldSection
-            objectPrice={objectPrice}
-            rentYear={rentYear}
-            yieldData={yieldData}
-          />
+          <div className="space-y-6">
+            <YieldSection
+              objectPrice={objectPrice}
+              rentYear={rentYear}
+              yieldData={yieldData}
+            />
+            <section className="rounded-2xl border bg-white p-5 space-y-4">
+              <div className="text-base font-semibold">Почему это безопасная инвестиция</div>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                <li className="flex gap-2"><span className="text-green-600 shrink-0">✓</span>Вы покупаете долю реального арендного дохода, а не обещание</li>
+                <li className="flex gap-2"><span className="text-green-600 shrink-0">✓</span>Доход выплачивается ежемесячно пропорционально вашей доле</li>
+                <li className="flex gap-2"><span className="text-green-600 shrink-0">✓</span>Свободный выход через P2P рынок в любой момент</li>
+                <li className="flex gap-2"><span className="text-green-600 shrink-0">✓</span>Объект управляется профессиональной управляющей компанией</li>
+                <li className="flex gap-2"><span className="text-green-600 shrink-0">✓</span>История доходности и все ключевые показатели прозрачны</li>
+              </ul>
+            </section>
+          </div>
         )}
         {activeTab === "objects" && <OwnerObjectsSection />}
         {activeTab === "news" && (
@@ -848,11 +860,10 @@ function RightSidebar(props: {
 }) {
   const { listing, objectPrice, rentYear, minTicket } = props;
   return (
-    <div className="col-span-3 px-6 py-6 border-l space-y-6 min-h-[1500px]">
+    <div className="col-span-3 px-6 py-6 border-l space-y-6">
       <div className="space-y-1">
         <div className="flex items-center gap-2"><span className="opacity-60">🏢</span><div className="text-lg font-semibold">{listing.title}</div></div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground"><span>{FLAG_MAP[listing.country] ?? "🏳️"} {listing.country}</span><span className="opacity-40">•</span><span className="flex items-center gap-1"><span className="opacity-60">📍</span>{listing.city}</span></div>
-        <div className="flex gap-2 pt-2">{[1,2,3,4,5].map((i) => (<div key={i} className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center text-xs text-muted-foreground">фото</div>))}</div>
       </div>
       <InvestmentCalculator objectPrice={objectPrice} rentYear={rentYear} minTicket={minTicket} />
     </div>
@@ -928,8 +939,8 @@ function InvestmentCalculator(props: { objectPrice: number; rentYear: number; mi
         <InfoRow label="Финальная сумма" value={`$${finalAmount.toLocaleString()}`} />
       </div>
 
-      <button className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-4 rounded-2xl text-lg">
-        Инвестировать от ${minTicket.toLocaleString()}
+      <button className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2.5 rounded-xl text-base font-medium">
+        Инвестировать
       </button>
 
       <div className="border-t pt-3 space-y-3">
