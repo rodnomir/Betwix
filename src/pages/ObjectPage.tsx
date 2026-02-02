@@ -1,6 +1,16 @@
-import React, { useMemo, useState } from "react";
-import { useParams, useLocation, Navigate } from "react-router-dom";
-import { getListingById, type Listing } from "@/data/demoListings";
+import { useEffect, useMemo, useState } from "react";
+import { ThumbsUp, ThumbsDown } from "lucide-react";
+import { useParams, useLocation, Navigate, Link } from "react-router-dom";
+import { getListingById, getOwnerById, getListingsByOwnerId, DEMO_LISTINGS, type Listing } from "@/data/demoListings";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { LotTableRow } from "@/components/LotTableRow";
 
 const DAYS_IN_YEAR = 365;
 
@@ -118,6 +128,8 @@ function ObjectPage() {
       <div className="max-w-7xl mx-auto grid grid-cols-12 w-full">
         <LeftSidebar
           listing={listing}
+          owner={getOwnerById(listing.ownerId)}
+          ownerObjectsCount={getListingsByOwnerId(listing.ownerId).length}
           occupancyRate={OCCUPANCY_RATE}
           occupiedArea={occupancy.occupiedArea}
           vacantArea={occupancy.vacantArea}
@@ -132,6 +144,8 @@ function ObjectPage() {
           objectPrice={listing.businessValue}
           rentYear={RENT_YEAR}
           yieldData={yieldData}
+          currentListingId={listing.id}
+          currentOwnerId={listing.ownerId}
         />
 
         <RightSidebar
@@ -223,6 +237,8 @@ function MetricCard(props: {
 
 function LeftSidebar(props: {
   listing: Listing;
+  owner: { id: string; name: string; rating: number } | null;
+  ownerObjectsCount: number;
   occupancyRate: number;
   occupiedArea: number;
   vacantArea: number;
@@ -234,6 +250,8 @@ function LeftSidebar(props: {
 }) {
   const {
     listing,
+    owner,
+    ownerObjectsCount,
     occupancyRate,
     occupiedArea,
     vacantArea,
@@ -244,7 +262,8 @@ function LeftSidebar(props: {
     yieldGrowthPct,
   } = props;
   const yieldPct = currentYield.toFixed(1);
-  const ownerRating = 7.5 + (listing.businessValue % 25) / 10;
+  const ownerRating = owner?.rating ?? 7.5 + (listing.businessValue % 25) / 10;
+  const isResidential = listing.propertyType === "Жилая";
   const subRatings = useMemo(
     () => ({
       yield: 7 + (listing.businessValue % 4),
@@ -266,14 +285,16 @@ function LeftSidebar(props: {
       <section className="space-y-4">
         <div className="text-xs font-semibold text-muted-foreground uppercase">Владелец объекта</div>
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold">JD</div>
+          <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold">
+            {owner ? owner.name.split(" ").map((n) => n[0]).join("").slice(0, 2) : "?"}
+          </div>
           <div>
-            <div className="font-medium">John Doe</div>
+            <div className="font-medium">{owner?.name ?? "—"}</div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>Рейтинг собственника</span>
               <div className="relative group">
                 <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold cursor-help">{ownerRating.toFixed(1)} / 10</span>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 hidden group-hover:block w-80 p-3 text-xs bg-background border rounded shadow text-muted-foreground pointer-events-auto">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 hidden group-hover:block w-80 p-3 text-xs bg-white border rounded shadow-lg text-slate-600 pointer-events-auto">
                   Рейтинг собственника формируется на основе:
                   <ul className="list-disc pl-4 mt-2 space-y-1">
                     <li><b>Стабильности выплат</b> — отсутствие задержек и пропусков выплат инвесторам</li>
@@ -287,7 +308,7 @@ function LeftSidebar(props: {
                 </div>
               </div>
             </div>
-            <div className="text-xs text-muted-foreground">Объектов на платформе: 6</div>
+            <div className="text-xs text-muted-foreground">Объектов на платформе: {ownerObjectsCount}</div>
           </div>
         </div>
       </section>
@@ -312,32 +333,38 @@ function LeftSidebar(props: {
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Занятость</div>
-              <div className="text-lg font-semibold">{Math.round(occupancyRate * 100)}%</div>
+              <div className="text-lg font-semibold">{isResidential ? "100%" : `${Math.round(occupancyRate * 100)}%`}</div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Потенциал</div>
               <div className="text-lg font-semibold text-green-600">
-                ${potentialIncomeYear.toLocaleString()}
+                {isResidential ? "100%" : `$${potentialIncomeYear.toLocaleString()}`}
               </div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Потерянный доход</div>
-              <div className="text-lg font-semibold text-orange-600">-${lostIncomeYear.toLocaleString()}</div>
+              <div className="text-lg font-semibold text-orange-600">
+                {isResidential ? "Нет" : `-$${lostIncomeYear.toLocaleString()}`}
+              </div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Площадь занята</div>
-              <div className="text-lg font-semibold">{occupiedArea} м²</div>
+              <div className="text-lg font-semibold">
+                {isResidential ? `${40 + (listing.businessValue % 111)} м²` : `${occupiedArea} м²`}
+              </div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Свободно</div>
-              <div className="text-lg font-semibold text-orange-600">{vacantArea} м²</div>
+              <div className="text-lg font-semibold text-orange-600">
+                {isResidential ? "0 м²" : `${vacantArea} м²`}
+              </div>
             </div>
           </div>
 
           <div className="pt-3 space-y-1 text-xs text-muted-foreground">
             <div>✓ Управляющая компания</div>
             <div>✓ Контракт с индексацией</div>
-            <div>✓ Фактическая занятость {Math.round(occupancyRate * 100)}%</div>
+            <div>✓ Фактическая занятость {isResidential ? "100%" : `${Math.round(occupancyRate * 100)}%`}</div>
           </div>
         </div>
       </section>
@@ -349,7 +376,7 @@ function LeftSidebar(props: {
               Рейтинг объекта
               <div className="relative group">
                 <span className="text-2xl font-semibold text-indigo-600 cursor-help">{totalRating.toFixed(1)} / 10</span>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 hidden group-hover:block w-80 p-3 text-xs bg-background border rounded shadow text-muted-foreground">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 hidden group-hover:block w-80 p-3 text-xs bg-white border rounded shadow-lg text-slate-600">
                   Рейтинг объекта рассчитывается по следующим параметрам:
                   <ul className="list-disc pl-4 mt-2 space-y-1">
                     <li><b>Доходность</b> — фактическая и прогнозируемая доходность объекта</li>
@@ -384,8 +411,10 @@ function CenterContent(props: {
   objectPrice: number;
   rentYear: number;
   yieldData: YieldYearData[];
+  currentListingId: string;
+  currentOwnerId: string;
 }) {
-  const { objectPrice, rentYear, yieldData } = props;
+  const { objectPrice, rentYear, yieldData, currentListingId, currentOwnerId } = props;
   const [activeTab, setActiveTab] = useState<
     "graph" | "objects" | "news" | "docs"
   >("graph");
@@ -399,19 +428,27 @@ function CenterContent(props: {
             { id: "objects" as const, label: "Объекты владельца" },
             { id: "news" as const, label: "Новости" },
             { id: "docs" as const, label: "Документы" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`pb-1 font-medium transition-colors ${
-                activeTab === tab.id
-                  ? "border-b-2 border-primary text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={
+                  "group relative block pb-1 font-medium transition-colors " +
+                  (isActive ? "text-blue-600" : "text-slate-800 hover:text-blue-600")
+                }
+              >
+                {tab.label}
+                <span
+                  className={
+                    "absolute left-1/2 -translate-x-1/2 -bottom-0.5 h-0.5 rounded-full bg-blue-500 transition-all duration-200 ease-out " +
+                    (isActive ? "w-full" : "w-0 group-hover:w-full")
+                  }
+                />
+              </button>
+            );
+          })}
         </div>
       </nav>
 
@@ -432,52 +469,476 @@ function CenterContent(props: {
                 <li className="flex gap-2"><span className="text-green-600 shrink-0">✓</span>Объект управляется профессиональной управляющей компанией</li>
                 <li className="flex gap-2"><span className="text-green-600 shrink-0">✓</span>История доходности и все ключевые показатели прозрачны</li>
               </ul>
+              <div className="text-xs text-slate-500">
+                Управляющие компании проходят отдельную проверку платформой и работают по стандартам Betwix.
+              </div>
             </section>
           </div>
         )}
-        {activeTab === "objects" && <OwnerObjectsSection />}
-        {activeTab === "news" && (
-          <section className="space-y-4">
-            <div className="text-base font-semibold">
-              Новости управляющей компании
-            </div>
-            <div className="space-y-4">
-              {Array.from({ length: 15 }).map((_, i) => (
-                <NewsItem
-                  key={i}
-                  author="УК London Property"
-                  date={`Новость №${i + 1} · 2026`}
-                  text="Плановое обновление по объекту. Все показатели в пределах нормы, арендаторы работают в штатном режиме."
-                />
-              ))}
-            </div>
-          </section>
-        )}
+        {activeTab === "objects" && <OwnerObjectsSection currentListingId={currentListingId} currentOwnerId={currentOwnerId} />}
+        {activeTab === "news" && <NewsTabContent currentListingId={currentListingId} />}
         {activeTab === "docs" && (
-          <section className="space-y-4">
-            <div className="text-base font-semibold">Документы по объекту</div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted transition">
-                <div className="flex items-center gap-3">
-                  <span>📄</span>
-                  <div>
-                    <div className="text-sm font-medium">
-                      Отчёт УК · Декабрь 2025
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Финансы и заполняемость
-                    </div>
-                  </div>
-                </div>
-                <button className="text-sm text-blue-600 hover:underline">
-                  Скачать
-                </button>
-              </div>
-            </div>
-          </section>
+          <DocumentsTabContent
+            yieldData={yieldData}
+            currentListingId={currentListingId}
+          />
         )}
       </div>
     </div>
+  );
+}
+
+const DOCS_PER_PAGE = 8;
+const LOAD_MORE_DOCS = 6;
+
+function DocumentsTabContent(props: {
+  yieldData: YieldYearData[];
+  currentListingId: string;
+}) {
+  const { yieldData, currentListingId } = props;
+  const years = [...new Set(yieldData.map((d) => d.y))].sort((a, b) => a - b);
+  const seed = parseInt(currentListingId.replace(/\D/g, ""), 10) || 1;
+  const startShift = seed % 5;
+  const baseYears = years.slice(startShift);
+  const hasQuarterly = (seed % 3) !== 2;
+  const yearlyYears = baseYears;
+  const quarterlyYears = hasQuarterly ? baseYears.slice(0, Math.max(1, baseYears.length - (seed % 2))) : [];
+
+  const yearlyByYear = useMemo(() => {
+    const m = new Map<number, { title: string; sub: string }[]>();
+    for (const y of yearlyYears) {
+      m.set(y, [{ title: `Годовой отчёт УК · ${y}`, sub: "Финансы, доходность и заполняемость" }]);
+    }
+    return m;
+  }, [yearlyYears]);
+
+  const quarterlyByYear = useMemo(() => {
+    const m = new Map<number, { title: string; sub: string }[]>();
+    for (const y of quarterlyYears) {
+      const items = [1, 2, 3, 4].map((q) => ({
+        title: `Отчёт УК · Q${q} ${y}`,
+        sub: "Финансы, доходность и заполняемость",
+      }));
+      m.set(y, items);
+    }
+    return m;
+  }, [quarterlyYears]);
+
+  const [docSubTab, setDocSubTab] = useState<"yearly" | "quarterly">("yearly");
+  const defaultYearlyYear = yearlyYears[yearlyYears.length - 1] ?? null;
+  const defaultQuarterlyYear = quarterlyYears[quarterlyYears.length - 1] ?? null;
+  const [selectedYear, setSelectedYear] = useState<number | null>(() => defaultYearlyYear ?? defaultQuarterlyYear);
+  const [shownCount, setShownCount] = useState(DOCS_PER_PAGE);
+
+  const currentYears = docSubTab === "yearly" ? yearlyYears : quarterlyYears;
+  const effectiveYear = selectedYear && currentYears.includes(selectedYear)
+    ? selectedYear
+    : currentYears[currentYears.length - 1] ?? null;
+
+  useEffect(() => {
+    const def = docSubTab === "yearly" ? defaultYearlyYear : defaultQuarterlyYear;
+    setSelectedYear(def);
+    setShownCount(DOCS_PER_PAGE);
+  }, [docSubTab, defaultYearlyYear, defaultQuarterlyYear]);
+
+  const docsForYear = effectiveYear
+    ? (docSubTab === "yearly" ? yearlyByYear.get(effectiveYear) ?? [] : quarterlyByYear.get(effectiveYear) ?? [])
+    : [];
+  const visibleDocs = docsForYear.slice(0, shownCount);
+  const hasMoreDocs = shownCount < docsForYear.length;
+
+  const DocCard = ({ title, sub }: { title: string; sub: string }) => (
+    <div className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted transition">
+      <div className="flex items-center gap-3">
+        <span>📄</span>
+        <div>
+          <div className="text-sm font-medium">{title}</div>
+          <div className="text-xs text-muted-foreground">{sub}</div>
+        </div>
+      </div>
+      <button className="text-sm text-blue-600 hover:underline">Скачать</button>
+    </div>
+  );
+
+  return (
+    <section className="space-y-4">
+      <div className="text-base font-semibold">Документы по объекту</div>
+      <p className="text-sm text-slate-400">
+        Доступно только инвесторам и владельцу объекта
+      </p>
+      <div className="flex gap-5 text-xs border-b border-slate-100 pb-0">
+        <button
+          type="button"
+          onClick={() => setDocSubTab("yearly")}
+          className={
+            "group relative block pb-2 font-medium transition-colors " +
+            (docSubTab === "yearly" ? "text-blue-600" : "text-slate-500 hover:text-blue-600")
+          }
+        >
+          Годовые
+          <span
+            className={
+              "absolute left-1/2 -translate-x-1/2 -bottom-0.5 h-0.5 rounded-full bg-blue-500 transition-all duration-200 ease-out " +
+              (docSubTab === "yearly" ? "w-full" : "w-0 group-hover:w-full")
+            }
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => setDocSubTab("quarterly")}
+          className={
+            "group relative block pb-2 font-medium transition-colors " +
+            (docSubTab === "quarterly" ? "text-blue-600" : "text-slate-500 hover:text-blue-600")
+          }
+        >
+          Квартальные
+          <span
+            className={
+              "absolute left-1/2 -translate-x-1/2 -bottom-0.5 h-0.5 rounded-full bg-blue-500 transition-all duration-200 ease-out " +
+              (docSubTab === "quarterly" ? "w-full" : "w-0 group-hover:w-full")
+            }
+          />
+        </button>
+      </div>
+      {docSubTab === "yearly" && yearlyYears.length === 0 && (
+        <p className="text-sm text-slate-500">Годовые отчёты пока недоступны</p>
+      )}
+      {currentYears.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {currentYears.map((y) => (
+            <button
+              key={y}
+              type="button"
+              onClick={() => { setSelectedYear(y); setShownCount(DOCS_PER_PAGE); }}
+              className={
+                "px-3 py-1.5 text-sm font-medium rounded transition-colors " +
+                (effectiveYear === y ? "bg-blue-100 text-blue-700" : "text-slate-600 hover:bg-slate-100")
+              }
+            >
+              {y}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="space-y-3">
+        {visibleDocs.map((r) => (
+          <DocCard key={r.title} title={r.title} sub={r.sub} />
+        ))}
+      </div>
+      {hasMoreDocs && (
+        <button
+          type="button"
+          onClick={() => setShownCount((n) => Math.min(n + LOAD_MORE_DOCS, docsForYear.length))}
+          className="text-sm text-slate-600 hover:text-slate-900"
+        >
+          Показать ещё
+        </button>
+      )}
+      <div className="rounded-xl border bg-slate-50 p-5 mt-8 space-y-4">
+        <div className="text-sm font-medium text-slate-700">Отчётность от управляющей компании</div>
+        <p className="text-sm text-slate-600 leading-relaxed">
+          Все отчёты формируются управляющей компанией на основе фактических данных по объекту.
+          В отчётность входят финансовые показатели, заполняемость, арендные поступления и ключевые изменения по договору.
+        </p>
+        <div className="flex flex-col gap-1.5 text-xs text-slate-600">
+          <span className="flex items-baseline gap-2">
+            <span className="text-blue-600 shrink-0">✓</span>
+            <span>Одобрено владельцем объекта</span>
+          </span>
+          <span className="flex items-baseline gap-2">
+            <span className="text-blue-600 shrink-0">✓</span>
+            <span>Проверено платформой Betwix</span>
+          </span>
+          <span className="flex items-baseline gap-2">
+            <span className="text-blue-600 shrink-0">✓</span>
+            <span>Подготовлено управляющей компанией</span>
+          </span>
+        </div>
+        <p className="text-xs text-slate-500">
+          Обновляется ежеквартально и ежегодно в соответствии с регламентом платформы.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+const NEWS_TITLES = [
+  "Плановое обслуживание завершено",
+  "Финансовый отчёт за период",
+  "Применена индексация аренды",
+  "Комментарий управляющей компании",
+  "Операционный статус объекта",
+  "Итоги квартальной отчётности",
+  "Обновление по техобслуживанию",
+  "Отчёт о заполняемости",
+  "Изменения в регламенте",
+];
+
+const NEWS_DESCRIPTIONS = [
+  "Работы выполнены по графику, помещение в рабочем состоянии.",
+  "Выручка и расходы соответствуют плану, выплаты по расписанию.",
+  "Арендная ставка скорректирована согласно договору.",
+  "УК даёт оценку текущей ситуации и перспектив.",
+  "Объект работает в штатном режиме, замечаний нет.",
+  "Ключевые показатели за квартал подготовлены и опубликованы.",
+  "Плановый ремонт проведён, коммуникации проверены.",
+  "Уровень занятости стабилен, прогноз сохранён.",
+  "Внесены уточнения в процедуры управления объектом.",
+];
+
+const EVENT_TITLES = [
+  "Поступил арендный платёж",
+  "Арендатор заехал",
+  "Арендатор выехал",
+  "Договор аренды продлён",
+  "Вакансия закрыта",
+  "Новый инвестор присоединился",
+  "Поступил арендный платёж",
+  "Обновлён договор аренды",
+  "Смена арендатора",
+];
+
+const EVENT_DESCRIPTIONS = [
+  "Ежемесячный платёж зафиксирован и зачислен.",
+  "Новый арендатор вступил во владение помещением.",
+  "Помещение освобождено по истечении договора.",
+  "Срок действия контракта продлён на новый период.",
+  "Помещение сдано, договор подписан.",
+  "Доля выкуплена, инвестор внесён в реестр.",
+  "Платёж от арендатора получен и подтверждён.",
+  "Условия договора обновлены, подписи внесены.",
+  "Предыдущий арендатор выбыл, новый въехал.",
+];
+
+const UK_NAMES = [
+  "УК London Property",
+  "УК Berlin Assets",
+  "УК Madrid Management",
+  "УК Amsterdam Realty",
+  "УК Vienna Holdings",
+  "УК Zurich Estates",
+];
+
+const MONTHS = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+
+function generateNewsAndEvents(listingId: string) {
+  const seed = parseInt(listingId.replace(/\D/g, ""), 10) || 1;
+  const mul = (a: number, b: number) => ((a * 31 + seed) % b + b) % b;
+  const newsCount = 3 + mul(seed, 7);
+  const eventsCount = 3 + mul(seed + 7, 7);
+  const ukIdx = mul(seed, UK_NAMES.length);
+  const source = UK_NAMES[ukIdx];
+
+  const now = new Date();
+  const items: { news: NewsEventItem[]; events: NewsEventItem[] } = { news: [], events: [] };
+
+  for (let i = 0; i < newsCount; i++) {
+    const daysAgo = i * (5 + mul(i, 4)) + mul(seed + i, 3);
+    const d = new Date(now);
+    d.setDate(d.getDate() - daysAgo);
+    const titleIdx = mul(seed + i * 11, NEWS_TITLES.length);
+    const descIdx = mul(seed + i * 13, NEWS_DESCRIPTIONS.length);
+    items.news.push({
+      id: `news-${listingId}-${i}`,
+      title: NEWS_TITLES[titleIdx],
+      description: NEWS_DESCRIPTIONS[descIdx],
+      date: `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`,
+      source,
+      isNew: i < (mul(seed, 2) + 1),
+      likes: 4 + mul(seed + i, 15),
+      dislikes: mul(seed + i * 2, 5),
+      views: 50 + mul(seed + i * 3, 200),
+    });
+  }
+
+  for (let i = 0; i < eventsCount; i++) {
+    const daysAgo = i * (4 + mul(i + 1, 5)) + mul(seed + i, 2);
+    const d = new Date(now);
+    d.setDate(d.getDate() - daysAgo);
+    const titleIdx = mul(seed + i * 17, EVENT_TITLES.length);
+    const descIdx = mul(seed + i * 19, EVENT_DESCRIPTIONS.length);
+    items.events.push({
+      id: `events-${listingId}-${i}`,
+      title: EVENT_TITLES[titleIdx],
+      description: EVENT_DESCRIPTIONS[descIdx],
+      date: `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`,
+      source,
+      isNew: i < (mul(seed + 3, 2) + 1),
+      likes: 6 + mul(seed + i, 12),
+      dislikes: mul(seed + i * 5, 4),
+      views: 80 + mul(seed + i * 7, 180),
+    });
+  }
+
+  const parseDate = (s: string) => {
+    const [d, mon, y] = s.split(" ");
+    const mi = MONTHS.indexOf(mon);
+    return new Date(parseInt(y, 10), mi, parseInt(d, 10)).getTime();
+  };
+  items.news.sort((a, b) => parseDate(b.date) - parseDate(a.date));
+  items.events.sort((a, b) => parseDate(b.date) - parseDate(a.date));
+
+  const setNewFlags = (list: NewsEventItem[], maxNew: number) => {
+    list.forEach((it, idx) => { it.isNew = idx < maxNew; });
+  };
+  setNewFlags(items.news, Math.min(2, 1 + mul(seed, 2)));
+  setNewFlags(items.events, Math.min(2, 1 + mul(seed + 1, 2)));
+
+  return items;
+}
+
+type NewsEventItem = {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  source: string;
+  isNew: boolean;
+  likes: number;
+  dislikes: number;
+  views: number;
+};
+
+const ITEMS_PER_PAGE = 10;
+const LOAD_MORE_COUNT = 5;
+
+function NewsTabContent(props: { currentListingId: string }) {
+  const { currentListingId } = props;
+  const [subTab, setSubTab] = useState<"news" | "events">("events");
+  const [eventsShown, setEventsShown] = useState(ITEMS_PER_PAGE);
+  const [newsShown, setNewsShown] = useState(ITEMS_PER_PAGE);
+
+  const data = useMemo(() => generateNewsAndEvents(currentListingId), [currentListingId]);
+  const eventsNewCount = data.events.filter((e) => e.isNew).length;
+  const newsNewCount = data.news.filter((n) => n.isNew).length;
+  const visibleEvents = data.events.slice(0, eventsShown);
+  const visibleNews = data.news.slice(0, newsShown);
+  const hasMoreEvents = eventsShown < data.events.length;
+  const hasMoreNews = newsShown < data.news.length;
+
+  return (
+    <section className="space-y-6">
+      <div className="flex gap-5 text-xs border-b border-slate-100 pb-0">
+        <button
+          type="button"
+          onClick={() => setSubTab("news")}
+          className={
+            "group relative block pb-2 font-medium transition-colors " +
+            (subTab === "news" ? "text-blue-600" : "text-slate-500 hover:text-blue-600")
+          }
+        >
+          Новости{newsNewCount > 0 ? ` (${newsNewCount})` : ""}
+          <span
+            className={
+              "absolute left-1/2 -translate-x-1/2 -bottom-0.5 h-0.5 rounded-full bg-blue-500 transition-all duration-200 ease-out " +
+              (subTab === "news" ? "w-full" : "w-0 group-hover:w-full")
+            }
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubTab("events")}
+          className={
+            "group relative block pb-2 font-medium transition-colors " +
+            (subTab === "events" ? "text-blue-600" : "text-slate-500 hover:text-blue-600")
+          }
+        >
+          События{eventsNewCount > 0 ? ` (${eventsNewCount})` : ""}
+          <span
+            className={
+              "absolute left-1/2 -translate-x-1/2 -bottom-0.5 h-0.5 rounded-full bg-blue-500 transition-all duration-200 ease-out " +
+              (subTab === "events" ? "w-full" : "w-0 group-hover:w-full")
+            }
+          />
+        </button>
+      </div>
+
+      {subTab === "events" && (
+        <div className="divide-y divide-slate-100">
+          {visibleEvents.map((item) => (
+            <div key={item.id} className="py-5 first:pt-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-slate-900">{item.title}</span>
+                {item.isNew && (
+                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">NEW</span>
+                )}
+              </div>
+              <div className="text-sm text-muted-foreground mt-1 line-clamp-2">{item.description}</div>
+              <div className="flex items-center justify-between gap-2 mt-2">
+                <div className="text-xs text-slate-500">
+                  {item.date} · {item.source}
+                </div>
+                <div className="flex items-center gap-4 text-xs">
+                  <span className="flex items-center gap-1 text-slate-400">
+                    <ThumbsUp size={16} className="shrink-0 text-slate-400" />
+                    <span className="text-slate-500">{item.likes}</span>
+                  </span>
+                  <span className="flex items-center gap-1 text-slate-400">
+                    <ThumbsDown size={16} className="shrink-0 text-slate-400" />
+                    <span className="text-slate-500">{(item.dislikes % 11) + 1}</span>
+                  </span>
+                  <span className="text-slate-400">{item.views}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+          {hasMoreEvents && (
+            <div className="pt-4">
+              <button
+                type="button"
+                onClick={() => setEventsShown((n) => Math.min(n + LOAD_MORE_COUNT, data.events.length))}
+                className="text-sm text-slate-600 hover:text-slate-900"
+              >
+                Показать ещё
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {subTab === "news" && (
+        <div className="divide-y divide-slate-100">
+          {visibleNews.map((item) => (
+            <div key={item.id} className="py-5 first:pt-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-slate-900">{item.title}</span>
+                {item.isNew && (
+                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">NEW</span>
+                )}
+              </div>
+              <div className="text-sm text-muted-foreground mt-1 line-clamp-2">{item.description}</div>
+              <div className="flex items-center justify-between gap-2 mt-2">
+                <div className="text-xs text-slate-500">
+                  {item.date} · {item.source}
+                </div>
+                <div className="flex items-center gap-4 text-xs">
+                  <span className="flex items-center gap-1 text-slate-400">
+                    <ThumbsUp size={16} className="shrink-0 text-slate-400" />
+                    <span className="text-slate-500">{item.likes}</span>
+                  </span>
+                  <span className="flex items-center gap-1 text-slate-400">
+                    <ThumbsDown size={16} className="shrink-0 text-slate-400" />
+                    <span className="text-slate-500">{(item.dislikes % 11) + 1}</span>
+                  </span>
+                  <span className="text-slate-400">{item.views}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+          {hasMoreNews && (
+            <div className="pt-4">
+              <button
+                type="button"
+                onClick={() => setNewsShown((n) => Math.min(n + LOAD_MORE_COUNT, data.news.length))}
+                className="text-sm text-slate-600 hover:text-slate-900"
+              >
+                Показать ещё
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -520,7 +981,7 @@ function YieldSection(props: {
             <div className="text-base font-semibold">Доходность по годам</div>
             <div className="relative group">
               <span className="w-5 h-5 flex items-center justify-center rounded-full border text-xs cursor-help">?</span>
-              <div className="absolute left-0 top-6 z-20 hidden group-hover:block w-64 p-3 text-xs bg-background border rounded shadow">
+              <div className="absolute left-0 top-6 z-50 hidden group-hover:block w-64 p-3 text-xs bg-white border rounded shadow-lg text-slate-600">
                 Этот график показывает, как менялась доходность объекта по годам.
                 Высота столбцов — годовая доходность в процентах.
               </div>
@@ -700,146 +1161,108 @@ function YieldSection(props: {
   );
 }
 
-function OwnerObjectsSection() {
-  const objects = [
-    {
-      id: 1,
-      locationCountry: "🇬🇧 Великобритания",
-      locationCity: "Лондон",
-      yield: "9.5%",
-      risk: "81%",
-      riskDelta: "▼ 1,450 Kr",
-      min: "$5,000",
-      progress: 24,
-      days: "30 дней",
-      left: "480,934",
-    },
-    {
-      id: 2,
-      locationCountry: "🇬🇧 Великобритания",
-      locationCity: "Манчестер",
-      yield: "7.1%",
-      risk: "74%",
-      riskDelta: "▲ 820 Kr",
-      min: "$5,000",
-      progress: 25,
-      days: "45 дней",
-      left: "105,931",
-    },
-    {
-      id: 3,
-      locationCountry: "🇬🇧 Великобритания",
-      locationCity: "Бирмингем",
-      yield: "8.3%",
-      risk: "76%",
-      riskDelta: "▲ 410 Kr",
-      min: "$5,000",
-      progress: 40,
-      days: "20 дней",
-      left: "210,120",
-    },
-    {
-      id: 4,
-      locationCountry: "🇬🇧 Великобритания",
-      locationCity: "Лидс",
-      yield: "6.9%",
-      risk: "72%",
-      riskDelta: "▼ 120 Kr",
-      min: "$5,000",
-      progress: 60,
-      days: "12 дней",
-      left: "98,400",
-    },
-    {
-      id: 5,
-      locationCountry: "🇬🇧 Великобритания",
-      locationCity: "Бристоль",
-      yield: "7.8%",
-      risk: "79%",
-      riskDelta: "▲ 560 Kr",
-      min: "$5,000",
-      progress: 18,
-      days: "55 дней",
-      left: "315,600",
-    },
-    {
-      id: 6,
-      locationCountry: "🇬🇧 Великобритания",
-      locationCity: "Ливерпуль",
-      yield: "8.1%",
-      risk: "77%",
-      riskDelta: "▲ 300 Kr",
-      min: "$5,000",
-      progress: 33,
-      days: "28 дней",
-      left: "188,900",
-    },
-  ];
+function OwnerObjectsSection(props: { currentListingId: string; currentOwnerId: string }) {
+  const { currentListingId, currentOwnerId } = props;
+  const ownerObjects = useMemo(() => {
+    return DEMO_LISTINGS.filter(
+      (l) => l.ownerId === currentOwnerId && l.id !== currentListingId
+    );
+  }, [currentListingId, currentOwnerId]);
+
+  const riskStats = useMemo(() => {
+    if (ownerObjects.length === 0) return { min: 1, avg: 1.5, max: 2 };
+    const coeffs = ownerObjects.map((l) => 1 + l.salePercent / 100);
+    const min = Math.min(...coeffs);
+    const max = Math.max(...coeffs);
+    const avg = coeffs.reduce((a, b) => a + b, 0) / coeffs.length;
+    return { min, avg, max };
+  }, [ownerObjects]);
 
   return (
     <section id="objects" className="p-4 space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <div className="text-base font-semibold">Объекты владельца</div>
+          <div className="text-base font-semibold">Объекты этого владельца</div>
           <div className="text-sm text-muted-foreground">
-            Другие объекты этого собственника, доступные для инвестирования
+            Другие объекты собственника, доступные для инвестирования
           </div>
         </div>
-        
       </div>
 
-      <div className="space-y-2">
-        {/* Header */}
-        <div className="grid grid-cols-6 gap-6 px-2 text-sm text-muted-foreground">
-          <div>Локация</div>
-          <div>Доходность</div>
-          <div>Риск</div>
-          <div>Мин</div>
-          <div className="col-span-2">Сбор</div>
-        </div>
-
-        {objects.map((o) => (
-          <div
-            key={o.id}
-            className="grid grid-cols-6 gap-6 items-center px-2 py-4 border-t hover:bg-muted transition"
-          >
-            {/* Location */}
-            <div>
-              <div className="font-medium">{o.locationCountry}</div>
-              <div className="text-xs text-muted-foreground">📍 {o.locationCity}</div>
-            </div>
-
-            {/* Yield */}
-            <div>
-              <div className="text-green-600 font-semibold">{o.yield}</div>
-              <div className="text-xs text-muted-foreground">годовых</div>
-            </div>
-
-            {/* Risk */}
-            <div>
-              <div className="font-medium">{o.risk}</div>
-              <div className="text-xs text-green-600">{o.riskDelta}</div>
-            </div>
-
-            {/* Min */}
-            <div className="font-medium">{o.min}</div>
-
-            {/* Progress */}
-            <div className="col-span-2 space-y-1">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{o.progress}%</span>
-                <span>${o.left}</span>
-              </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 rounded-full"
-                  style={{ width: `${o.progress}%` }}
+      <div className="mt-5 -mx-4 overflow-x-hidden [&>*]:overflow-x-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-white">
+              <TableHead className="w-[150px]">Локация</TableHead>
+              <TableHead className="w-[72px] text-center">Доход</TableHead>
+              <TableHead className="w-[70px] text-center">Риск</TableHead>
+              <TableHead className="w-[140px]">Стоимость</TableHead>
+              <TableHead>Сбор</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {ownerObjects.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="py-10 text-center text-slate-500">
+                  Нет других объектов
+                </TableCell>
+              </TableRow>
+            ) : (
+              ownerObjects.map((l, index) => (
+                <LotTableRow
+                  key={l.id}
+                  listing={l}
+                  index={index}
+                  riskStats={riskStats}
+                  showMinInvestment={false}
+                  showType={false}
+                  showStar={false}
+                  showIndex={false}
+                  showInvestButton={false}
+                  compactView={true}
+                  compactYieldColumn={true}
                 />
-              </div>
-              <div className="text-xs text-muted-foreground">{o.days}</div>
-            </div>
-          </div>
-        ))}
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="mt-6">
+        <h3 className="text-sm font-medium text-slate-900 mb-3">
+          Надёжность и управление объектами
+        </h3>
+
+        <ul className="space-y-2 text-sm text-slate-700">
+          <li className="flex gap-2">
+            <span className="text-emerald-500">✓</span>
+            Владелец и объекты проверены платформой
+          </li>
+          <li className="flex gap-2">
+            <span className="text-emerald-500">✓</span>
+            Управление объектами осуществляется профессиональной управляющей компанией
+          </li>
+          <li className="flex gap-2">
+            <span className="text-emerald-500">✓</span>
+            Стабильные выплаты инвесторам на основе фактической аренды
+          </li>
+          <li className="flex gap-2">
+            <span className="text-emerald-500">✓</span>
+            Подтверждённая фактическая занятость объектов
+          </li>
+          <li className="flex gap-2">
+            <span className="text-emerald-500">✓</span>
+            Действующие договоры с арендаторами
+          </li>
+          <li className="flex gap-2">
+            <span className="text-emerald-500">✓</span>
+            Прозрачная финансовая отчётность
+          </li>
+        </ul>
+
+        <p className="mt-3 text-xs text-slate-500">
+          Управляющие компании проходят отдельную проверку платформой и работают по стандартам Betwix.
+        </p>
       </div>
     </section>
   );
@@ -871,16 +1294,17 @@ function RightSidebar(props: {
 }
 
 
+const P2P_MARKET_MULTIPLIER = 1.02;
+
 function InvestmentCalculator(props: { objectPrice: number; rentYear: number; minTicket: number }) {
   const { objectPrice, rentYear, minTicket } = props;
   const [investment, setInvestment] = useState(100);
-  const [years, setYears] = useState(10);
 
+  const annualNetIncome = rentYear;
   const share = investment / objectPrice;
-  const incomeYear = rentYear * share;
-  const incomeMonth = incomeYear / 12;
-  const totalIncome = incomeYear * years;
-  const finalAmount = investment + totalIncome;
+  const monthlyIncome = (annualNetIncome / 12) * share;
+  const yearlyIncome = annualNetIncome * share;
+  const estimatedExitValue = investment * P2P_MARKET_MULTIPLIER;
 
   return (
     <div className="border rounded-3xl p-6 space-y-6">
@@ -889,7 +1313,7 @@ function InvestmentCalculator(props: { objectPrice: number; rentYear: number; mi
           <div className="text-xl font-semibold">Покупка доли</div>
           <div className="relative group">
             <span className="w-5 h-5 flex items-center justify-center rounded-full border text-xs cursor-help">?</span>
-            <div className="absolute left-1/2 -translate-x-1/2 top-6 z-20 hidden group-hover:block w-64 max-w-[90vw] p-3 text-xs bg-background border rounded shadow">
+            <div className="absolute left-1/2 -translate-x-1/2 top-6 z-50 hidden group-hover:block w-64 max-w-[90vw] p-3 text-xs bg-white border rounded shadow-lg text-slate-600">
               Вы покупаете долю арендного дохода объекта. Доход выплачивается ежемесячно пропорционально вашей доле. Долю можно продать на P2P рынке в любой момент.
             </div>
           </div>
@@ -915,28 +1339,14 @@ function InvestmentCalculator(props: { objectPrice: number; rentYear: number; mi
         />
       </div>
 
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Срок инвестирования</span>
-          <span className="font-semibold">{years} лет</span>
-        </div>
-        <input
-          type="range"
-          min={1}
-          max={20}
-          step={1}
-          value={years}
-          onChange={(e) => setYears(Number(e.target.value))}
-          className="w-full"
-        />
-      </div>
-
       <div className="border-t pt-4 space-y-3 text-sm">
         <InfoRow label="Ваша доля" value={`${(share * 100).toFixed(2)}%`} />
-        <InfoRow label="Доход в месяц" value={`$${incomeMonth.toFixed(2)}`} />
-        <InfoRow label="Доход в год" value={`$${incomeYear.toFixed(0)}`} />
-        <InfoRow label={`Общий доход (${years} лет)`} value={`$${totalIncome.toLocaleString()}`} />
-        <InfoRow label="Финальная сумма" value={`$${finalAmount.toLocaleString()}`} />
+        <InfoRow label="Доход в месяц" value={`$${monthlyIncome.toFixed(2)}`} />
+        <InfoRow label="Доход в год" value={`$${yearlyIncome.toFixed(0)}`} />
+      </div>
+
+      <div className="text-xs text-muted-foreground">
+        Рыночная цена P2P применяется только при продаже доли и не является арендным доходом
       </div>
 
       <button className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2.5 rounded-xl text-base font-medium">
@@ -947,8 +1357,12 @@ function InvestmentCalculator(props: { objectPrice: number; rentYear: number; mi
         <div className="text-sm font-medium">P2P рынок долей</div>
         <div className="space-y-1 text-xs text-muted-foreground">
           <div>
-            Рыночная цена доли: <span className="font-medium text-foreground">1.02×</span>
+            Рыночная цена доли: <span className="font-medium text-foreground">{P2P_MARKET_MULTIPLIER}×</span>
           </div>
+          <div>
+            Оценка стоимости доли при продаже: <span className="font-medium text-foreground">≈ ${estimatedExitValue.toFixed(0)}</span>
+          </div>
+          <div className="text-muted-foreground/80">Цена формируется рынком и не гарантирована</div>
           <div>
             Последняя сделка: <span className="font-medium text-foreground">$5,120</span>
           </div>
@@ -958,6 +1372,9 @@ function InvestmentCalculator(props: { objectPrice: number; rentYear: number; mi
           <div>
             Ожидаемое время выхода: <span className="font-medium text-foreground">3–7 дней</span>
           </div>
+          <Link to="/p2p" className="text-sm text-slate-500 hover:text-blue-600 cursor-pointer">
+            Смотреть ордера на P2P →
+          </Link>
         </div>
 
         <div className="border-t pt-3 text-xs text-muted-foreground space-y-1">
@@ -982,19 +1399,3 @@ function InfoRow(props: { label: string; value: string }) {
 }
 
 export default ObjectPage;
-
-function NewsItem(props: { author: string; date: string; text: string }) {
-  return (
-    <div className="flex gap-3">
-      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-        {props.author.charAt(0)}
-      </div>
-      <div>
-        <div className="text-xs text-muted-foreground">
-          {props.author} · {props.date}
-        </div>
-        <div className="text-sm">{props.text}</div>
-      </div>
-    </div>
-  );
-}

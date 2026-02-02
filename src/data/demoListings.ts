@@ -8,8 +8,34 @@ export type PropertyType =
   | "Склады"
   | "Бизнес";
 
+export type Owner = {
+  id: string;
+  name: string;
+  rating: number;
+  avatar?: string;
+};
+
+export const DEMO_OWNERS: Owner[] = [
+  { id: "owner-1", name: "John Doe", rating: 7.8 },
+  { id: "owner-2", name: "Anna Smith", rating: 8.2 },
+  { id: "owner-3", name: "Michael Brown", rating: 7.1 },
+  { id: "owner-4", name: "Elena Vasiliev", rating: 8.5 },
+  { id: "owner-5", name: "James Wilson", rating: 6.9 },
+  { id: "owner-6", name: "Maria Garcia", rating: 8.0 },
+  { id: "owner-7", name: "Thomas Müller", rating: 7.4 },
+  { id: "owner-8", name: "Sophie Laurent", rating: 7.6 },
+  { id: "owner-9", name: "David Kim", rating: 8.3 },
+  { id: "owner-10", name: "Olga Petrova", rating: 7.2 },
+  { id: "owner-11", name: "Richard Clark", rating: 6.7 },
+  { id: "owner-12", name: "Yuki Tanaka", rating: 8.1 },
+  { id: "owner-13", name: "Carlos Silva", rating: 7.5 },
+  { id: "owner-14", name: "Emma Johnson", rating: 7.9 },
+  { id: "owner-15", name: "Hans Weber", rating: 7.3 },
+];
+
 export type Listing = {
   id: string;
+  ownerId: string;
   title: string;
   country: string;
   city: string;
@@ -30,9 +56,6 @@ export type Listing = {
 };
 
 function generateDemoListings(): Listing[] {
-  const listings: Listing[] = [];
-  let idx = 1;
-
   const citiesByCountry: Record<string, string[]> = {
     Великобритания: ["Лондон", "Манчестер", "Бирмингем"],
     Португалия: ["Лиссабон", "Порту"],
@@ -65,16 +88,33 @@ function generateDemoListings(): Listing[] {
     Колумбия: ["Богота"],
   };
 
+  const ownerCounts: number[] = DEMO_OWNERS.map(() =>
+    Math.floor(Math.random() * 8)
+  );
+  const totalListings = ownerCounts.reduce((a, b) => a + b, 0);
+  if (totalListings === 0) ownerCounts[0] = 5;
+
+  const allCities: { country: string; city: string }[] = [];
   Object.entries(citiesByCountry).forEach(([country, cities]) => {
-    const count = 5 + Math.floor(Math.random() * 6);
+    cities.forEach((city) => allCities.push({ country, city }));
+  });
+
+  const listings: Listing[] = [];
+  let idx = 1;
+  let cityIdx = 0;
+
+  DEMO_OWNERS.forEach((owner, ownerIdx) => {
+    const count = ownerCounts[ownerIdx];
     for (let i = 0; i < count; i++) {
-      const city = cities[i % cities.length];
+      const { country, city } = allCities[cityIdx % allCities.length];
+      cityIdx++;
       const rentMonthly = 1500 + Math.floor(Math.random() * 8000);
       const rentYearly = rentMonthly * 12;
       const businessValue = rentYearly * (8 + Math.random() * 6);
 
       listings.push({
         id: `lot-${String(idx).padStart(3, "0")}`,
+        ownerId: owner.id,
         title: ["Жилая", "Коммерческая", "Офисная", "Торговая", "Склады", "Бизнес"][
           idx % 6
         ] as PropertyType,
@@ -115,4 +155,13 @@ export function getListingById(id: string | undefined): Listing | null {
     DEMO_LISTINGS.find((l) => l.id === id || l.id.replace(/\D/g, "") === numericId) ??
     null
   );
+}
+
+export function getOwnerById(id: string | undefined): Owner | null {
+  if (!id) return null;
+  return DEMO_OWNERS.find((o) => o.id === id) ?? null;
+}
+
+export function getListingsByOwnerId(ownerId: string): Listing[] {
+  return DEMO_LISTINGS.filter((l) => l.ownerId === ownerId);
 }

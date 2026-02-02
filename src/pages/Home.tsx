@@ -556,7 +556,12 @@ export default function BetwixMarketplacePage() {
 
 
         {/* Table */}
-        <div className="mt-5 overflow-hidden rounded-xl border bg-white">
+        <div
+          className={
+            "mt-5 overflow-hidden rounded-xl border bg-white " +
+            (compactView ? "[&>*]:overflow-x-hidden" : "[&>*]:overflow-x-auto")
+          }
+        >
           <Table>
             <TableHeader>
               <TableRow className="bg-white">
