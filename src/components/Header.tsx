@@ -1,0 +1,80 @@
+import { NavLink } from "react-router-dom";
+
+export default function Header() {
+  const navLinkClass = ({
+    isActive,
+  }: {
+    isActive: boolean;
+    isPending: boolean;
+  }) =>
+    "group relative block pb-1 font-medium transition-colors " +
+    (isActive ? "text-blue-600" : "text-slate-800 hover:text-blue-600");
+
+  const underlineClass = (isActive: boolean) =>
+    "absolute left-1/2 -translate-x-1/2 -bottom-0.5 h-0.5 rounded-full bg-blue-500 transition-all duration-200 ease-out " +
+    (isActive ? "w-full" : "w-0 group-hover:w-full");
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-slate-100 bg-white">
+      <div className="mx-auto flex h-16 max-w-7xl items-center px-6">
+        {/* Left block: logo + nav */}
+        <div className="flex items-center gap-6">
+          <NavLink to="/" className="flex items-center shrink-0">
+            <img
+              src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40'%3E%3Cpath d='M20 4L36 20L20 36L4 20Z' fill='%231A2C42'/%3E%3Cpath d='M36 4L52 20L36 36L20 20Z' fill='%234A6B8F'/%3E%3Ctext x='60' y='28' font-family='Inter, system-ui, sans-serif' font-size='20' font-weight='600' letter-spacing='0.05em' fill='%231A2C42'%3EBETWIX%3C/text%3E%3C/svg%3E"
+              alt="Betwix"
+              className="h-8"
+            />
+          </NavLink>
+
+          <nav className="flex items-center gap-6">
+            <NavLink to="/" className={navLinkClass}>
+              {({ isActive }) => (
+                <>
+                  Лоты
+                  <span className={underlineClass(isActive)} />
+                </>
+              )}
+            </NavLink>
+            <NavLink to="/p2p" className={navLinkClass}>
+              {({ isActive }) => (
+                <>
+                  P2P рынок
+                  <span className={underlineClass(isActive)} />
+                </>
+              )}
+            </NavLink>
+            <NavLink to="/investor" className={navLinkClass}>
+              {({ isActive }) => (
+                <>
+                  Кабинет
+                  <span className={underlineClass(isActive)} />
+                </>
+              )}
+            </NavLink>
+          </nav>
+        </div>
+
+        {/* Right block: account + Вход */}
+        <div className="ml-auto flex items-center gap-4">
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <div className="text-xs text-slate-500">Лицевой счёт</div>
+            <div className="flex items-baseline gap-2">
+              <div className="text-sm font-medium text-slate-900">€11 320</div>
+              <div className="text-xs text-[#10B981]">+€290 rent</div>
+            </div>
+            <div className="h-6 w-px bg-slate-200" aria-hidden />
+            <div className="text-xs text-slate-500">Доступно</div>
+            <div className="text-sm font-medium text-slate-900">€7 460</div>
+          </div>
+          <button
+            type="button"
+            className="rounded-full bg-blue-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+          >
+            Вход
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}

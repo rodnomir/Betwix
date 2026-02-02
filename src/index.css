@@ -34,3 +34,36 @@ html, body, #root {
   background-color: transparent !important;
   text-decoration: underline;
 }
+
+/* P2P Aggregated/REIT/Rent switch — dark active pill, Canvas style (P2P only) */
+.p2p-aggregated-switch .inline-flex.rounded-full.border {
+  background-color: #f8fafc !important;
+  border-color: #e5e7eb !important;
+}
+
+.p2p-aggregated-switch .inline-flex.rounded-full.border button {
+  background-color: transparent !important;
+  color: #64748b !important;
+  font-weight: 400 !important;
+}
+
+.p2p-aggregated-switch .inline-flex.rounded-full.border button:hover {
+  background-color: rgb(241 245 249) !important;
+  color: #334155 !important;
+}
+
+/* Active pill: dark graphite, no blue */
+.p2p-aggregated-switch .inline-flex.rounded-full.border button.bg-blue-600 {
+  background-color: #0f172a !important;
+  color: white !important;
+  font-weight: 500 !important;
+}
+
+.p2p-aggregated-switch .inline-flex.rounded-full.border button.bg-blue-600:hover {
+  background-color: #0f172a !important;
+  color: white !important;
+}
+
+.p2p-aggregated-switch .text-slate-500 {
+  color: #64748b !important;
+}

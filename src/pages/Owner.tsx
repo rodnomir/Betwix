@@ -1,3 +1,9 @@
+import PageContainer from "@/components/PageContainer";
+
 export default function Owner() {
-  return <h1>OWNER CABINET</h1>;
+  return (
+    <PageContainer>
+      <h1>OWNER CABINET</h1>
+    </PageContainer>
+  );
 }

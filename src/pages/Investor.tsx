@@ -1,3 +1,9 @@
+import PageContainer from "@/components/PageContainer";
+
 export default function Investor() {
-  return <h1>INVESTOR CABINET</h1>;
+  return (
+    <PageContainer>
+      <h1>INVESTOR CABINET</h1>
+    </PageContainer>
+  );
 }

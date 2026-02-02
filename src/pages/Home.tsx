@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Star, Home, Building, Briefcase, Store, Warehouse, Menu, User } from "lucide-react";
+import { Star, Home, Building, Briefcase, Store, Warehouse } from "lucide-react";
+import PageContainer from "@/components/PageContainer";
+import SubTabs, { SubTabsSection } from "@/components/SubTabs";
 
 /**
  * Betwix — Главная Страница Лотов (MVP)
@@ -19,113 +22,10 @@ import { Star, Home, Building, Briefcase, Store, Warehouse, Menu, User } from "l
  */
 
 // -----------------------------
-// Types + Demo data
+// Demo data (shared with ObjectPage)
 // -----------------------------
 
-type PropertyType = "Жилая" | "Коммерческая" | "Офисная" | "Торговая" | "Склады" | "Бизнес";
-
-type Listing = {
-  id: string;
-  title: string;
-  country: string;
-  city: string;
-  address: string;
-
-  rentMonthly: number;
-  rentYearly: number;
-  termYears: number;
-
-  businessValue: number;
-
-  minTicket: number;
-  raiseTarget: number;
-  raiseCollected: number;
-  raiseStartISO: string;
-  daysLeft: number;
-
-  propertyType: PropertyType;
-  tenantType: "Физ" | "Юр";
-  liquidity: "Низкая" | "Средняя" | "Высокая";
-  salePercent: number;
-};
-
-function generateDemoListings(): Listing[] {
-  const listings: Listing[] = [];
-  let idx = 1;
-
-  const citiesByCountry: Record<string, string[]> = {
-    Великобритания: ["Лондон", "Манчестер", "Бирмингем"],
-    Португалия: ["Лиссабон", "Порту"],
-    Испания: ["Мадрид", "Барселона", "Валенсия"],
-    Германия: ["Берлин", "Мюнхен", "Гамбург"],
-    Нидерланды: ["Амстердам", "Роттердам"],
-    Австрия: ["Вена", "Грац"],
-    Швейцария: ["Цюрих", "Женева"],
-    Франция: ["Париж", "Лион"],
-    Польша: ["Варшава", "Краков"],
-
-    США: ["Нью-Йорк", "Майами", "Остин"],
-    Канада: ["Торонто", "Ванкувер"],
-
-    Япония: ["Токио", "Осака"],
-    "Южная Корея": ["Сеул"],
-    Сингапур: ["Сингапур"],
-    Таиланд: ["Бангкок", "Пхукет"],
-    Индия: ["Мумбаи", "Бангалор"],
-    Индонезия: ["Джакарта", "Бали"],
-    Вьетнам: ["Хошимин", "Ханой"],
-    Малайзия: ["Куала-Лумпур"],
-
-    ОАЭ: ["Дубай", "Абу-Даби"],
-
-    Украина: ["Киев", "Львов"],
-    Казахстан: ["Алматы", "Астана"],
-    Узбекистан: ["Ташкент"],
-    Беларусь: ["Минск"],
-    Россия: ["Москва", "Санкт-Петербург"],
-
-    Мексика: ["Мехико"],
-    Бразилия: ["Сан-Паулу"],
-    Чили: ["Сантьяго"],
-    Колумбия: ["Богота"],
-  };
-
-  Object.entries(citiesByCountry).forEach(([country, cities]) => {
-    const count = 5 + Math.floor(Math.random() * 6); // 5–10
-    for (let i = 0; i < count; i++) {
-      const city = cities[i % cities.length];
-      const rentMonthly = 1500 + Math.floor(Math.random() * 8000);
-      const rentYearly = rentMonthly * 12;
-      const businessValue = rentYearly * (8 + Math.random() * 6);
-
-      listings.push({
-        id: `lot-${String(idx).padStart(3, "0")}`,
-        title: ["Жилая","Коммерческая","Офисная","Торговая","Склады","Бизнес"][idx % 6] as PropertyType,
-        country,
-        city,
-        address: "Центральный район",
-        rentMonthly,
-        rentYearly,
-        termYears: 5 + Math.floor(Math.random() * 10),
-        businessValue: Math.round(businessValue),
-        minTicket: 5000,
-        raiseTarget: Math.round(businessValue * 0.6),
-        raiseCollected: Math.round(businessValue * Math.random() * 0.4),
-        raiseStartISO: "2026-01-01",
-        daysLeft: 5 + Math.floor(Math.random() * 30),
-        propertyType: ["Жилая","Коммерческая","Офисная","Торговая","Склады","Бизнес"][idx % 6] as PropertyType,
-        tenantType: Math.random() > 0.5 ? "Физ" : "Юр",
-        liquidity: ["Низкая", "Средняя", "Высокая"][Math.floor(Math.random() * 3)] as any,
-        salePercent: 40 + Math.floor(Math.random() * 40),
-      });
-      idx++;
-    }
-  });
-
-  return listings;
-}
-
-const DEMO_LISTINGS: Listing[] = generateDemoListings();
+import { DEMO_LISTINGS, type Listing } from "@/data/demoListings";
 
 // -----------------------------
 // Regions + Flags
@@ -230,7 +130,7 @@ function progressPct(collected: number, target: number) {
 
 const Footer = () => (
   <footer className="mt-12 border-t border-[#E5E7EB] bg-white">
-    <div className="mx-auto max-w-7xl px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-8 text-sm">
+    <div className="mx-auto max-w-7xl px-6 py-10 grid grid-cols-1 md:grid-cols-4 gap-8 text-sm">
       <div>
         <img src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 40'%3E%3Cg fill='%230F2A44'%3E%3Cpath d='M20 4L36 20L20 36L4 20Z'/%3E%3Cpath d='M36 4L52 20L36 36L20 20Z' opacity='0.85'/%3E%3Ctext x='70' y='28' font-family='Inter, system-ui, -apple-system' font-size='22' font-weight='700' letter-spacing='2'%3EBETWIX%3C/text%3E%3C/g%3E%3C/svg%3E" alt="Betwix" className="h-8 mb-2" />
         <div className="text-slate-500">Инвестиции в доходную недвижимость</div>
@@ -274,13 +174,9 @@ const Footer = () => (
 
 
 export default function BetwixMarketplacePage() {
+  const navigate = useNavigate();
   const [sortKey, setSortKey] = useState<keyof Listing | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-
-  
-  
-  
-  
   const [compactView, setCompactView] = useState(true);
 
   const [regionFilter, setRegionFilter] = useState<RegionKey | "all">("all");
@@ -376,57 +272,15 @@ export default function BetwixMarketplacePage() {
     (active ? "bg-slate-100 text-slate-700" : "text-slate-600 hover:bg-slate-50");
 
   return (
-    <div className="min-h-screen bg-[#FEFEFF]">
-      {/* Header */}
-      <header className="border-b border-[#E5E7EB] bg-white sticky top-0 z-50">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <div className="flex items-center gap-2">
-            <img
-              src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40'%3E%3Cpath d='M20 4L36 20L20 36L4 20Z' fill='%231A2C42'/%3E%3Cpath d='M36 4L52 20L36 36L20 20Z' fill='%234A6B8F'/%3E%3Ctext x='60' y='28' font-family='Inter, system-ui, sans-serif' font-size='20' font-weight='600' letter-spacing='0.05em' fill='%231A2C42'%3EBETWIX%3C/text%3E%3C/svg%3E"
-              alt="Betwix"
-              className="h-8"
-            />
-          </div>
-
-          <nav className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
-            <button className="relative font-medium text-[#1A2C42] pb-1">
-              Лоты
-              <span className="absolute left-0 -bottom-0.5 h-0.5 w-full bg-blue-500 rounded-full" />
-            </button>
-            <button className="group relative font-medium text-[#6B7280] pb-1 transition-colors hover:text-[#1A2C42]">
-              P2P рынок
-              <span className="absolute left-1/2 -translate-x-1/2 -bottom-0.5 h-0.5 w-0 rounded-full bg-blue-500 transition-all duration-200 ease-out group-hover:w-full group-hover:left-0 group-hover:translate-x-0" />
-            </button>
-          </nav>
-
-          <div className="flex items-center gap-4">
-            <button className="rounded-full px-5 py-2 text-sm font-medium text-white bg-[#2A7FF7] hover:bg-[#2563eb] transition-colors">
-              Вход
-            </button>
-            <div className="inline-flex items-center rounded-full border border-[#D1D5DB] bg-white pl-3 pr-2 py-2 gap-2">
-              <button className="flex items-center justify-center text-[#374151] hover:text-[#1A2C42]">
-                <Menu className="h-5 w-5" />
-              </button>
-              <div className="w-px h-5 bg-[#E5E7EB]" aria-hidden />
-              <button className="flex items-center justify-center text-[#4A6B8F] hover:text-[#1A2C42]">
-                <User className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Data source switch */}
-      <div className="mx-auto max-w-7xl px-4 mt-3">
-        <div className="inline-flex rounded-full border border-[#DDE2E8] bg-white p-1 text-sm">
-          <button onClick={() => setDataSource("aggregated")} className={`px-3 py-1 rounded-full text-sm font-medium ${dataSource === "aggregated" ? "bg-[#1877F2] text-white" : "text-[#6B7280]"}`}>Aggregated</button>
-          <button onClick={() => setDataSource("reit")} className={`px-3 py-1 rounded-full text-sm font-medium ${dataSource === "reit" ? "bg-[#1877F2] text-white" : "text-[#6B7280]"}`}>REIT</button>
-          <button onClick={() => setDataSource("rent")} className={`px-3 py-1 rounded-full text-sm font-medium ${dataSource === "rent" ? "bg-[#1877F2] text-white" : "text-[#6B7280]"}`}>Rent</button>
-        </div>
-      </div>
+    <div className="min-h-full">
+      <PageContainer>
+      {/* Sub tabs (spacing matches P2P exactly) */}
+      <SubTabsSection>
+        <SubTabs active={dataSource} onChange={(v) => setDataSource(v as "aggregated" | "reit" | "rent")} />
+      </SubTabsSection>
 
       {/* Content */}
-      <div className="mx-auto max-w-7xl px-4 py-6 pt-6">
+      <div className="pt-0 pb-6">
         {/* Market overview (dynamic by region) */}
         {(() => {
           const DASHBOARD: Record<"aggregated" | "reit" | "rent", Record<"all" | RegionKey, any>> = {
@@ -764,7 +618,11 @@ export default function BetwixMarketplacePage() {
                   const pct = progressPct(l.raiseCollected, l.raiseTarget);
                   const yieldPct = ((l.rentYearly / l.businessValue) * 100).toFixed(1);
                   return (
-                    <TableRow key={l.id}>
+                    <TableRow
+                      key={l.id}
+                      className="cursor-pointer hover:bg-slate-50"
+                      onClick={() => navigate(`/object/${l.id}`, { state: { listing: l } })}
+                    >
                       <TableCell className="w-[36px] py-1">
                         <button className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-slate-100">
                           <Star className="h-4 w-4 text-slate-500" />
@@ -868,7 +726,7 @@ export default function BetwixMarketplacePage() {
                       </TableCell>
 
                       {/* Покупка */}
-                      <TableCell className="py-1">
+                      <TableCell className="py-1" onClick={(e) => e.stopPropagation()}>
                         <Button
                           size="sm"
                           variant="outline"
@@ -884,7 +742,8 @@ export default function BetwixMarketplacePage() {
             </TableBody>
           </Table>
         </div>
-            </div>
+      </div>
+      </PageContainer>
       <Footer />
     </div>
   );
