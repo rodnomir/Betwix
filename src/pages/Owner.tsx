@@ -2,10 +2,12 @@
 // Style aligned with main marketplace & investor cabinet (blue, minimal)
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowUpRight,
   Building2,
   CalendarDays,
+  CheckCircle,
   Loader2,
   MapPin,
   Plus,
@@ -39,7 +41,7 @@ type ManagementCo = {
   verified?: boolean;
 };
 
-type OwnerObject = {
+export type OwnerObject = {
   id: string;
   title: string;
   country: string;
@@ -64,6 +66,7 @@ type OwnerObject = {
   fundingPct: number;
   fundingLeft: number;
   fundingDays: number;
+  liquidity?: "Низкая" | "Средняя" | "Высокая";
 };
 
 type TxType =
@@ -344,6 +347,10 @@ type SummaryData = {
   ownerNet: number;
   tenants: number;
   arrears: number;
+  annualIncome: number;
+  monthlyIncome: number;
+  growthPct: number;
+  potentialVsFact: number;
 };
 
 /** Single source: period-based aggregates. Values for each period. */
@@ -356,6 +363,10 @@ const PERIOD_SUMMARIES: Record<Period, SummaryData> = {
     ownerNet: 29300,
     tenants: 7,
     arrears: 1800,
+    annualIncome: 1152000,
+    monthlyIncome: 96000,
+    growthPct: 2.4,
+    potentialVsFact: 12400,
   },
   quarter: {
     grossRent: 278000,
@@ -365,6 +376,10 @@ const PERIOD_SUMMARIES: Record<Period, SummaryData> = {
     ownerNet: 85100,
     tenants: 7,
     arrears: 2400,
+    annualIncome: 1112000,
+    monthlyIncome: 92700,
+    growthPct: 1.8,
+    potentialVsFact: 35800,
   },
   year: {
     grossRent: 1120000,
@@ -374,6 +389,10 @@ const PERIOD_SUMMARIES: Record<Period, SummaryData> = {
     ownerNet: 348000,
     tenants: 7,
     arrears: 5600,
+    annualIncome: 1120000,
+    monthlyIncome: 93300,
+    growthPct: 3.1,
+    potentialVsFact: 142000,
   },
   all: {
     grossRent: 2480000,
@@ -383,6 +402,10 @@ const PERIOD_SUMMARIES: Record<Period, SummaryData> = {
     ownerNet: 768000,
     tenants: 7,
     arrears: 9200,
+    annualIncome: 1240000,
+    monthlyIncome: 103300,
+    growthPct: 2.9,
+    potentialVsFact: 312000,
   },
 };
 
@@ -475,6 +498,7 @@ const MOCK_OBJECTS: OwnerObject[] = [
     fundingPct: 10,
     fundingLeft: 417859,
     fundingDays: 24,
+    liquidity: "Средняя",
   },
   {
     id: "RE-OF-03",
@@ -501,6 +525,7 @@ const MOCK_OBJECTS: OwnerObject[] = [
     fundingPct: 94,
     fundingLeft: 42100,
     fundingDays: 8,
+    liquidity: "Высокая",
   },
   {
     id: "RE-COM-07",
@@ -527,6 +552,7 @@ const MOCK_OBJECTS: OwnerObject[] = [
     fundingPct: 100,
     fundingLeft: 0,
     fundingDays: 0,
+    liquidity: "Высокая",
   },
   {
     id: "RE-WH-09",
@@ -553,6 +579,7 @@ const MOCK_OBJECTS: OwnerObject[] = [
     fundingPct: 22,
     fundingLeft: 228000,
     fundingDays: 45,
+    liquidity: "Низкая",
   },
 ];
 
@@ -611,6 +638,11 @@ const MOCK_TX: Transaction[] = [
     balanceAfter: 138500,
   },
 ];
+
+export function getOwnerObjectById(id: string | undefined): OwnerObject | null {
+  if (!id) return null;
+  return MOCK_OBJECTS.find((o) => o.id === id) ?? null;
+}
 
 const MOCK_MGMT: MgmtItem[] = [
   {
@@ -731,8 +763,16 @@ function SubNav({
 ------------------------------------------------------------------ */
 
 export default function OwnerDashboard() {
+  const location = useLocation();
   const [section, setSection] = useState<Section>("dashboard");
   const [period, setPeriod] = useState<Period>("month");
+
+  useEffect(() => {
+    const state = location.state as { openSection?: Section } | null;
+    if (state?.openSection && ["dashboard", "management", "notifications", "documents", "settings"].includes(state.openSection)) {
+      setSection(state.openSection);
+    }
+  }, [location.state]);
 
   const topBarRight =
     section === "dashboard" ? (
@@ -778,8 +818,14 @@ type DashboardSectionProps = {
   period: Period;
 };
 
+const CHART_YEARS = [2022, 2023, 2024];
+const CHART_INCOME_USD = [890000, 1020000, 1120000];
+const CHART_YIELD_PCT = [5.2, 6.1, 6.5];
+
 function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
+  const navigate = useNavigate();
   const [previewTab, setPreviewTab] = useState<"objects" | "operations">("objects");
+  const [chartMode, setChartMode] = useState<"usd" | "pct">("usd");
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<SummaryData>(PERIOD_SUMMARIES[period]);
 
@@ -829,14 +875,18 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
               <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
             </div>
           )}
-          <OwnerMetricCard title="Собрано аренды" value={money(summary.grossRent)} hint={`за ${periodLabel}`} />
-          <OwnerMetricCard title="Инвесторам" value={money(summary.investors)} hint="распределено" />
-          <OwnerMetricCard title="Остаётся владельцу" value={money(summary.ownerNet)} hint="после удержаний" />
+          <OwnerMetricCard title="Годовой доход" value={money(summary.annualIncome)} hint={`за ${periodLabel}`} />
+          <OwnerMetricCard title="Доход в месяц" value={money(summary.monthlyIncome)} hint="в среднем" />
           <OwnerMetricCard
-            title="Арендаторы"
-            value={`${summary.tenants}`}
-            hint={`Просрочка: ${summary.arrears > 0 ? money(summary.arrears) : "—"}`}
-            hintDanger={summary.arrears > 0}
+            title="Рост доходности"
+            value={`${summary.growthPct >= 0 ? "+" : ""}${summary.growthPct}%`}
+            hint="YoY"
+            hintDanger={summary.growthPct < 0}
+          />
+          <OwnerMetricCard
+            title="Потенциал vs факт"
+            value={money(summary.potentialVsFact)}
+            hint="дельта в $"
           />
         </div>
         <p className="mt-2 text-xs text-slate-500">Итоги за выбранный период</p>
@@ -894,9 +944,13 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {MOCK_OBJECTS.slice(0, 4).map((o) => (
-                          <tr key={o.id} className="border-t border-slate-100 hover:bg-slate-50/60 transition">
-                            <td className="p-3">
+                    {MOCK_OBJECTS.slice(0, 4).map((o) => (
+                      <tr
+                        key={o.id}
+                        className="border-t border-slate-100 hover:bg-slate-50/60 transition cursor-pointer"
+                        onClick={() => navigate(`/owner/object/${o.id}`)}
+                      >
+                        <td className="p-3">
                               <div className="flex flex-col leading-tight">
                                 <div className="flex items-center gap-1 text-slate-800">
                                   <span>{OWNER_FLAG_MAP[o.country] ?? "🏳️"}</span>
@@ -1006,6 +1060,58 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
               </div>
             </SoftCard>
 
+            {/* Доход объекта во времени (Income Chart) */}
+            <SoftCard>
+              <div className="p-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="text-lg font-semibold text-slate-900">Доход объекта во времени</div>
+                  <div className="flex rounded-lg border border-slate-200 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setChartMode("usd")}
+                      className={
+                        "px-3 py-1.5 text-sm font-medium rounded-md transition " +
+                        (chartMode === "usd" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100")
+                      }
+                    >
+                      $ дохода
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChartMode("pct")}
+                      className={
+                        "px-3 py-1.5 text-sm font-medium rounded-md transition " +
+                        (chartMode === "pct" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100")
+                      }
+                    >
+                      % доходности
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-end gap-4 pt-2">
+                  {CHART_YEARS.map((y, i) => {
+                    const val = chartMode === "usd" ? CHART_INCOME_USD[i] : CHART_YIELD_PCT[i];
+                    const max = chartMode === "usd" ? Math.max(...CHART_INCOME_USD) : Math.max(...CHART_YIELD_PCT);
+                    const pct = max > 0 ? (val / max) * 100 : 0;
+                    return (
+                      <div key={y} className="flex-1 flex flex-col items-center gap-2">
+                        <div className="w-full h-32 rounded-t bg-slate-100 overflow-hidden flex flex-col justify-end">
+                          <div
+                            className="w-full bg-blue-600 transition-all"
+                            style={{ height: `${Math.max(8, pct)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium text-slate-600">
+                          {chartMode === "usd" ? money(val) : `${val}%`}
+                        </span>
+                        <span className="text-xs text-slate-400">{y}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </SoftCard>
+
             {/* Распределение аренды (Distribution) */}
             <SoftCard>
               <div className="p-6 space-y-4">
@@ -1062,6 +1168,79 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
                   <Button className="flex-1 rounded-full bg-blue-600 hover:bg-blue-700">Пополнить</Button>
                   <Button variant="outline" className="flex-1 rounded-full">Вывести</Button>
                 </div>
+              </div>
+            </SoftCard>
+
+            {/* Liquidity */}
+            <SoftCard>
+              <div className="p-5 space-y-2">
+                <div
+                  className="text-sm font-semibold text-slate-900"
+                  title="Влияет на скорость продаж долей инвесторами"
+                >
+                  Ликвидность
+                </div>
+                <div className="text-base font-medium text-slate-700">
+                  {(() => {
+                    const liq = MOCK_OBJECTS.filter((o) => o.liquidity).map((o) => o.liquidity!);
+                    const high = liq.filter((l) => l === "Высокая").length;
+                    const low = liq.filter((l) => l === "Низкая").length;
+                    if (high >= 2) return "Высокая";
+                    if (low >= 2) return "Низкая";
+                    return "Средняя";
+                  })()}
+                </div>
+                <p className="text-xs text-slate-500" title="Влияет на скорость продаж долей инвесторами">
+                  Влияет на скорость продаж долей инвесторами
+                </p>
+              </div>
+            </SoftCard>
+
+            {/* Risks — только факты */}
+            <SoftCard>
+              <div className="p-5 space-y-3">
+                <div className="text-sm font-semibold text-slate-900">Риски</div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Vacancy rate</span>
+                    <span className="font-medium text-slate-900">
+                      {(
+                        100 -
+                        MOCK_OBJECTS.reduce((s, o) => s + o.occupancyPct, 0) / MOCK_OBJECTS.length
+                      ).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Свободная площадь</span>
+                    <span className="font-medium text-slate-900">120 м²</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Потерянный доход</span>
+                    <span className="font-medium text-rose-600">{money(12400)}</span>
+                  </div>
+                </div>
+              </div>
+            </SoftCard>
+
+            {/* УК */}
+            <SoftCard>
+              <div className="p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-slate-900">УК:</span>
+                  <span className="text-sm font-medium text-slate-700">
+                    {MOCK_MGMT[0]?.name ?? "GreenStone"}
+                  </span>
+                  {(MOCK_MGMT[0]?.verified ?? true) && (
+                    <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("documents")}
+                  className="text-sm text-blue-600 hover:underline text-left"
+                >
+                  Перейти к отчётам УК
+                </button>
               </div>
             </SoftCard>
 

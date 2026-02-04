@@ -7,6 +7,7 @@ import Home from "./pages/Home";
 import Marketplace from "./pages/Marketplace";
 import Investor from "./pages/Investor";
 import Owner from "./pages/Owner";
+import OwnerObjectPage from "./pages/OwnerObjectPage";
 import ObjectPage from "./pages/ObjectPage";
 
 function AppContent() {
@@ -24,6 +25,7 @@ function AppContent() {
             <Route path="/object/:id" element={<ObjectPage />} />
             <Route path="/investor" element={<Investor />} />
             <Route path="/owner" element={<Owner />} />
+            <Route path="/owner/object/:id" element={<OwnerObjectPage />} />
           </Routes>
         </main>
       </div>
