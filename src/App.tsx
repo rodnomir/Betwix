@@ -1,17 +1,21 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Header from "./components/Header";
+import AuthModal from "./components/AuthModal";
 import Home from "./pages/Home";
 import Marketplace from "./pages/Marketplace";
 import Investor from "./pages/Investor";
 import Owner from "./pages/Owner";
 import ObjectPage from "./pages/ObjectPage";
 
-export default function App() {
+function AppContent() {
+  const { isModalOpen, openAuthModal, closeAuthModal } = useAuth();
+
   return (
-    <BrowserRouter>
+    <>
       <div className="flex flex-col bg-[#FEFEFF]">
-        <Header />
+        <Header onLoginClick={openAuthModal} />
         <main className="pt-2 pb-6">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -23,6 +27,17 @@ export default function App() {
           </Routes>
         </main>
       </div>
+      <AuthModal open={isModalOpen} onClose={closeAuthModal} />
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </BrowserRouter>
   );
 }

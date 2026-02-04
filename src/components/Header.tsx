@@ -1,6 +1,25 @@
 import { NavLink } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
-export default function Header() {
+type HeaderProps = {
+  onLoginClick?: () => void;
+};
+
+function getCabinetLabel(role: "investor" | "owner" | null): string {
+  if (role === "investor") return "Кабинет инвестора";
+  if (role === "owner") return "Кабинет владельца";
+  return "Кабинет";
+}
+
+function getCabinetPath(role: "investor" | "owner" | null): string {
+  if (role === "owner") return "/owner";
+  return "/investor";
+}
+
+export default function Header({ onLoginClick }: HeaderProps) {
+  const { role } = useAuth();
+  const cabinetLabel = getCabinetLabel(role);
+  const cabinetPath = getCabinetPath(role);
   const navLinkClass = ({
     isActive,
   }: {
@@ -44,10 +63,10 @@ export default function Header() {
                 </>
               )}
             </NavLink>
-            <NavLink to="/investor" className={navLinkClass}>
+            <NavLink to={cabinetPath} className={navLinkClass}>
               {({ isActive }) => (
                 <>
-                  Кабинет
+                  {cabinetLabel}
                   <span className={underlineClass(isActive)} />
                 </>
               )}
@@ -69,6 +88,7 @@ export default function Header() {
           </div>
           <button
             type="button"
+            onClick={onLoginClick}
             className="rounded-full bg-blue-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
           >
             Вход

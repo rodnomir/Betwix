@@ -51,7 +51,7 @@ function generateYieldData(listing: Listing, rentYear: number): YieldYearData[] 
   return data;
 }
 
-function Header() {
+export function Header() {
   return (
     <div className="sticky top-0 z-50 border-b px-8 py-4 bg-background">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -209,7 +209,7 @@ function Footer() {
   );
 }
 
-function MetricCard(props: {
+export function MetricCard(props: {
   label: string;
   value: string;
   sub?: string;
@@ -257,7 +257,6 @@ function LeftSidebar(props: {
     vacantArea,
     lostIncomeYear,
     potentialIncomeYear,
-    vacancyDaysYear,
     currentYield,
     yieldGrowthPct,
   } = props;
