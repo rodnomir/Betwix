@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -175,6 +176,7 @@ const Footer = () => (
 
 export default function BetwixMarketplacePage() {
   const navigate = useNavigate();
+  const { isAuthenticated, openAuthModal } = useAuth();
   const [sortKey, setSortKey] = useState<keyof Listing | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [compactView, setCompactView] = useState(true);
@@ -730,12 +732,17 @@ export default function BetwixMarketplacePage() {
                         </div>
                       </TableCell>
 
-                      {/* Покупка */}
+                      {/* Покупка — только эта кнопка открывает регистрацию при !auth */}
                       <TableCell className="py-1" onClick={(e) => e.stopPropagation()}>
                         <Button
                           size="sm"
                           variant="outline"
                           className="btn-invest h-6 rounded-full px-2 text-xs text-blue-500 border-blue-500 hover:bg-transparent hover:underline shadow-none"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!isAuthenticated) openAuthModal();
+                            else navigate(`/object/${l.id}`, { state: { listing: l } });
+                          }}
                         >
                           Инвестировать
                         </Button>

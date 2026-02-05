@@ -16,8 +16,13 @@ function getCabinetPath(role: "investor" | "owner" | null): string {
   return "/investor";
 }
 
+function formatMoney(value: number, currency: "USD" | "EUR"): string {
+  const symbol = currency === "USD" ? "$" : "€";
+  return `${symbol}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export default function Header({ onLoginClick }: HeaderProps) {
-  const { role } = useAuth();
+  const { role, isAuthenticated, balance, available, currency, setCurrency, setRole } = useAuth();
   const cabinetLabel = getCabinetLabel(role);
   const cabinetPath = getCabinetPath(role);
   const navLinkClass = ({
@@ -32,6 +37,12 @@ export default function Header({ onLoginClick }: HeaderProps) {
   const underlineClass = (isActive: boolean) =>
     "absolute left-1/2 -translate-x-1/2 -bottom-0.5 h-0.5 rounded-full bg-blue-500 transition-all duration-200 ease-out " +
     (isActive ? "w-full" : "w-0 group-hover:w-full");
+
+  const handleLogout = () => {
+    setRole(null);
+  };
+
+  const isOwner = role === "owner";
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-100 bg-white">
@@ -63,35 +74,70 @@ export default function Header({ onLoginClick }: HeaderProps) {
                 </>
               )}
             </NavLink>
-            <NavLink to={cabinetPath} className={navLinkClass}>
-              {({ isActive }) => (
-                <>
-                  {cabinetLabel}
-                  <span className={underlineClass(isActive)} />
-                </>
-              )}
-            </NavLink>
+            {isAuthenticated && (
+              <NavLink to={cabinetPath} className={navLinkClass}>
+                {({ isActive }) => (
+                  <>
+                    {cabinetLabel}
+                    <span className={underlineClass(isActive)} />
+                  </>
+                )}
+              </NavLink>
+            )}
           </nav>
         </div>
 
-        {/* Right block: account + Вход */}
+        {/* Right block: Лицевой счёт/Доступно только при auth, иначе только Вход */}
         <div className="ml-auto flex items-center gap-4">
-          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <div className="text-xs text-slate-500">Лицевой счёт</div>
-            <div className="flex items-baseline gap-2">
-              <div className="text-sm font-medium text-slate-900">€11 320</div>
-              <div className="text-xs text-[#10B981]">+€290 rent</div>
+          {isAuthenticated && (
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <div className="text-xs text-slate-500">Лицевой счёт</div>
+              <div className="flex items-baseline gap-2">
+                <div className="text-sm font-medium text-slate-900">{formatMoney(balance, currency)}</div>
+                {!isOwner && role === "investor" && (
+                  <div className="text-xs text-[#10B981]">+{currency === "EUR" ? "€290" : "$320"} rent</div>
+                )}
+              </div>
+              <div className="h-6 w-px bg-slate-200" aria-hidden />
+              <div className="text-xs text-slate-500">Доступно</div>
+              <div className="text-sm font-medium text-slate-900">{formatMoney(available, currency)}</div>
+              {isOwner && (
+                <>
+                  <div className="h-6 w-px bg-slate-200" aria-hidden />
+                  <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-white p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setCurrency("EUR")}
+                      className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                        currency === "EUR"
+                          ? "bg-slate-100 text-slate-700"
+                          : "text-slate-400 hover:text-slate-500"
+                      }`}
+                    >
+                      EUR
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrency("USD")}
+                      className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                        currency === "USD"
+                          ? "bg-slate-100 text-slate-700"
+                          : "text-slate-400 hover:text-slate-500"
+                      }`}
+                    >
+                      USD
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
-            <div className="h-6 w-px bg-slate-200" aria-hidden />
-            <div className="text-xs text-slate-500">Доступно</div>
-            <div className="text-sm font-medium text-slate-900">€7 460</div>
-          </div>
+          )}
           <button
             type="button"
-            onClick={onLoginClick}
+            onClick={isAuthenticated ? handleLogout : onLoginClick}
             className="rounded-full bg-blue-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
           >
-            Вход
+            {isAuthenticated ? "Выход" : "Вход"}
           </button>
         </div>
       </div>

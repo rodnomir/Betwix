@@ -67,7 +67,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
               <Button variant="outline" onClick={onClose} className="flex-1">
                 Отмена
               </Button>
-              <Button onClick={handleContinue} className="flex-1">
+              <Button onClick={handleContinue} className="flex-1 !bg-blue-600 !text-white hover:!bg-blue-700">
                 Продолжить
               </Button>
             </div>
@@ -85,31 +85,31 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
             </button>
             <h2 className="text-lg font-semibold text-slate-900">Выберите роль</h2>
             <p className="mt-1 text-sm text-slate-500">Кем вы хотите войти?</p>
-            <div className="mt-6 space-y-3">
+            <div className="mt-6 grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => handleRoleSelect("investor")}
-                className="flex w-full items-center gap-4 rounded-xl border border-slate-200 p-4 text-left transition-colors hover:border-blue-300 hover:bg-blue-50/50"
+                className="flex flex-col items-center gap-3 rounded-xl border border-slate-200 p-4 text-center transition-colors hover:border-blue-300 hover:bg-blue-50/50"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100">
                   <User className="h-6 w-6 text-blue-600" />
                 </div>
-                <div>
-                  <div className="font-medium text-slate-900">Я инвестор</div>
-                  <div className="text-sm text-slate-500">Инвестирую в доли объектов</div>
+                <div className="w-full">
+                  <div className="font-medium text-slate-900">Инвестор</div>
+                  <div className="mt-1 text-sm text-slate-500">Хочу инвестировать в доли объектов</div>
                 </div>
               </button>
               <button
                 type="button"
                 onClick={() => handleRoleSelect("owner")}
-                className="flex w-full items-center gap-4 rounded-xl border border-slate-200 p-4 text-left transition-colors hover:border-blue-300 hover:bg-blue-50/50"
+                className="flex flex-col items-center gap-3 rounded-xl border border-slate-200 p-4 text-center transition-colors hover:border-blue-300 hover:bg-blue-50/50"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100">
                   <Building2 className="h-6 w-6 text-blue-600" />
                 </div>
-                <div>
-                  <div className="font-medium text-slate-900">Я владелец объекта</div>
-                  <div className="text-sm text-slate-500">Управляю объектами недвижимости</div>
+                <div className="w-full">
+                  <div className="font-medium text-slate-900">Арендодатель</div>
+                  <div className="mt-1 text-sm text-slate-500">Управляю арендным бизнесом</div>
                 </div>
               </button>
             </div>

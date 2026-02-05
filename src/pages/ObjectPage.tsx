@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { useParams, useLocation, Navigate, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { getListingById, getOwnerById, getListingsByOwnerId, DEMO_LISTINGS, type Listing } from "@/data/demoListings";
 import {
   Table,
@@ -84,8 +85,13 @@ export function Header() {
 function ObjectPage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+  const { isAuthenticated, openAuthModal } = useAuth();
   const listing: Listing | null =
     (location.state as { listing?: Listing } | null)?.listing ?? getListingById(id ?? "");
+
+  const handleInvestClick = () => {
+    if (!isAuthenticated) openAuthModal();
+  };
 
   if (!listing) return <Navigate to="/" replace />;
 
@@ -153,6 +159,7 @@ function ObjectPage() {
           objectPrice={OBJECT_PRICE}
           rentYear={RENT_YEAR}
           minTicket={listing.minTicket}
+          onInvestClick={handleInvestClick}
         />
       </div>
 
@@ -1279,15 +1286,16 @@ function RightSidebar(props: {
   objectPrice: number;
   rentYear: number;
   minTicket: number;
+  onInvestClick: () => void;
 }) {
-  const { listing, objectPrice, rentYear, minTicket } = props;
+  const { listing, objectPrice, rentYear, minTicket, onInvestClick } = props;
   return (
     <div className="col-span-3 px-6 py-6 border-l space-y-6">
       <div className="space-y-1">
         <div className="flex items-center gap-2"><span className="opacity-60">🏢</span><div className="text-lg font-semibold">{listing.title}</div></div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground"><span>{FLAG_MAP[listing.country] ?? "🏳️"} {listing.country}</span><span className="opacity-40">•</span><span className="flex items-center gap-1"><span className="opacity-60">📍</span>{listing.city}</span></div>
       </div>
-      <InvestmentCalculator objectPrice={objectPrice} rentYear={rentYear} minTicket={minTicket} />
+      <InvestmentCalculator objectPrice={objectPrice} rentYear={rentYear} minTicket={minTicket} onInvestClick={onInvestClick} />
     </div>
   );
 }
@@ -1295,8 +1303,8 @@ function RightSidebar(props: {
 
 const P2P_MARKET_MULTIPLIER = 1.02;
 
-function InvestmentCalculator(props: { objectPrice: number; rentYear: number; minTicket: number }) {
-  const { objectPrice, rentYear, minTicket } = props;
+function InvestmentCalculator(props: { objectPrice: number; rentYear: number; minTicket: number; onInvestClick: () => void }) {
+  const { objectPrice, rentYear, minTicket, onInvestClick } = props;
   const [investment, setInvestment] = useState(100);
 
   const annualNetIncome = rentYear;
@@ -1348,7 +1356,11 @@ function InvestmentCalculator(props: { objectPrice: number; rentYear: number; mi
         Рыночная цена P2P применяется только при продаже доли и не является арендным доходом
       </div>
 
-      <button className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2.5 rounded-xl text-base font-medium">
+      <button
+        type="button"
+        className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2.5 rounded-xl text-base font-medium"
+        onClick={onInvestClick}
+      >
         Инвестировать
       </button>
 

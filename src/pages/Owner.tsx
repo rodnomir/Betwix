@@ -2,17 +2,29 @@
 // Style aligned with main marketplace & investor cabinet (blue, minimal)
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
+  ArrowRight,
   ArrowUpRight,
+  Bell,
   Building2,
   CalendarDays,
   CheckCircle,
+  DollarSign,
+  FileText,
+  Key,
   Loader2,
   MapPin,
   Plus,
   Receipt,
+  Scale,
+  Search,
+  Shield,
+  TrendingUp,
+  Users,
   Wallet,
+  X,
 } from "lucide-react";
 
 // shadcn/ui
@@ -114,6 +126,8 @@ type NewsItem = {
 
 type MgmtReportStatus = "ok" | "pending";
 
+type MgmtStatusLabel = "Verified" | "Under review" | "Risk";
+
 type MgmtItem = {
   id: string;
   name: string;
@@ -122,6 +136,15 @@ type MgmtItem = {
   rentCollected: number;
   feeTotal: number;
   reportsStatus: MgmtReportStatus;
+  lastReportDate?: string;
+  incidentsCount?: number;
+};
+
+type OtherMgmtItem = {
+  id: string;
+  name: string;
+  status: "verified" | "in_review";
+  specialization?: string;
 };
 
 type NotificationItem = {
@@ -145,12 +168,28 @@ type DocItem = {
 ------------------------------------------------------------------ */
 
 const MONTHS_SHORT = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+const MONTHS_FULL = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
 
 function formatDateDisplay(s: string) {
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return s;
   const monthIdx = parseInt(m[2], 10) - 1;
   return `${m[3]} ${MONTHS_SHORT[monthIdx]} ${m[1]}`;
+}
+
+/** Для группировки ленты: "Сегодня" | "Вчера" | "18 января 2026" */
+function feedDateGroupLabel(dateStr: string, todayStr: string): string {
+  if (dateStr === todayStr) return "Сегодня";
+  const d = new Date(dateStr);
+  const t = new Date(todayStr);
+  d.setHours(0, 0, 0, 0);
+  t.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((t.getTime() - d.getTime()) / 86400000);
+  if (diffDays === 1) return "Вчера";
+  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return dateStr;
+  const monthIdx = parseInt(m[2], 10) - 1;
+  return `${parseInt(m[3], 10)} ${MONTHS_FULL[monthIdx]} ${m[1]}`;
 }
 
 function money(n: number) {
@@ -333,11 +372,15 @@ function SectionShell({
    Mock data
 ------------------------------------------------------------------ */
 
-const MOCK_ACCOUNT = {
+/** Owner balances in base currency (EUR). When object list is empty, use zero. */
+const MOCK_ACCOUNT_EUR = {
   balance: 12450,
   available: 8200,
   rentDelta: 320,
 };
+
+/** @deprecated Use MOCK_ACCOUNT_EUR for owner balance logic. Kept for non-balance usage. */
+const MOCK_ACCOUNT = MOCK_ACCOUNT_EUR;
 
 type SummaryData = {
   grossRent: number;
@@ -653,6 +696,8 @@ const MOCK_MGMT: MgmtItem[] = [
     rentCollected: 128400,
     feeTotal: 12400,
     reportsStatus: "pending",
+    lastReportDate: "2026-01-15",
+    incidentsCount: 1,
   },
   {
     id: "mc2",
@@ -662,7 +707,16 @@ const MOCK_MGMT: MgmtItem[] = [
     rentCollected: 41000,
     feeTotal: 2050,
     reportsStatus: "ok",
+    lastReportDate: "2026-01-20",
+    incidentsCount: 0,
   },
+];
+
+// Другие УК (для выбора при добавлении объекта / заявка на подключение)
+const MOCK_OTHER_MGMT: OtherMgmtItem[] = [
+  { id: "om1", name: "Prime Property Care", status: "verified", specialization: "Жилая недвижимость" },
+  { id: "om2", name: "Metro Estates УК", status: "verified", specialization: "Коммерческая" },
+  { id: "om3", name: "Regional Partners", status: "in_review", specialization: "Мультикласс" },
 ];
 
 const MOCK_NOTIFICATIONS: NotificationItem[] = [
@@ -686,6 +740,94 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     title: "Ожидает вывод владельцу",
     text: "Выплата $15,000 · Pending",
     date: "2026-01-15",
+  },
+];
+
+// Единая лента для раздела Уведомления (business news feed)
+type FeedItemType = "event" | "news" | "personal";
+type FeedImportance = "Critical" | "Warning" | "Info";
+
+type FeedItem = {
+  id: string;
+  type: FeedItemType;
+  importance: FeedImportance;
+  title: string;
+  description: string;
+  object?: string;
+  mgmt?: string;
+  amount?: number;
+  date: string; // YYYY-MM-DD
+  actions: { label: string }[];
+};
+
+const MOCK_FEED: FeedItem[] = [
+  {
+    id: "f1",
+    type: "event",
+    importance: "Critical",
+    title: "Просрочка аренды по объекту Canary Wharf",
+    description:
+      "Арендный платёж не поступил в установленный срок. УК уведомлена, статус будет обновлён после получения комментария.",
+    object: "RE-OF-03 · Canary Wharf",
+    mgmt: "CityLine УК",
+    amount: 1800,
+    date: "2026-01-20",
+    actions: [{ label: "Перейти к объекту" }, { label: "Напомнить УК" }],
+  },
+  {
+    id: "f2",
+    type: "event",
+    importance: "Warning",
+    title: "Отчёт УК не загружен",
+    description:
+      "Отчёт GreenStone за январь 2026 ещё не получен. Расчёт выплат инвесторам будет выполнен после загрузки отчётности.",
+    object: "RE-APT-12",
+    mgmt: "GreenStone",
+    date: "2026-01-18",
+    actions: [{ label: "Посмотреть отчёт" }, { label: "Напомнить УК" }],
+  },
+  {
+    id: "f3",
+    type: "news",
+    importance: "Info",
+    title: "GreenStone обновила прогноз по объекту RE-APT-12",
+    description: "Обновление финансовых показателей и прогноза доходности. Изменения отразятся в следующем отчёте.",
+    object: "RE-APT-12",
+    mgmt: "УК GreenStone",
+    date: "2026-01-18",
+    actions: [{ label: "К объекту" }],
+  },
+  {
+    id: "f4",
+    type: "event",
+    importance: "Info",
+    title: "Ожидает вывод владельцу",
+    description:
+      "Выплата вашей доли дохода ожидает подтверждения. После подтверждения средства поступят на лицевой счёт в течение 1–2 рабочих дней.",
+    amount: 15000,
+    date: "2026-01-15",
+    actions: [{ label: "Подтвердить" }, { label: "Перейти в Управление" }],
+  },
+  {
+    id: "f5",
+    type: "news",
+    importance: "Info",
+    title: "Переоценка NAV по объекту RE-OF-03",
+    description: "Квартальная переоценка стоимости объекта. Текущая оценка учтена в расчёте долей.",
+    object: "RE-OF-03",
+    mgmt: "УК CityLine",
+    date: "2026-01-12",
+    actions: [{ label: "Подробнее" }],
+  },
+  {
+    id: "f6",
+    type: "news",
+    importance: "Info",
+    title: "Платформа: обновление методики комиссий",
+    description: "Изменения вступили в силу для объектов, добавленных после 1 января 2026.",
+    mgmt: "Платформа Betwix",
+    date: "2026-01-08",
+    actions: [],
   },
 ];
 
@@ -713,6 +855,117 @@ const MOCK_DOCS: DocItem[] = [
   },
 ];
 
+/* ------------------------------------------------------------------
+   OwnerSubNavItem — 1:1 поведение с main navigation (Header).
+   Тот же hover/active: текст blue-600, линия из центра (w-0 → w-full),
+   duration-200 ease-out, лёгкий серый фон при hover.
+------------------------------------------------------------------ */
+function OwnerSubNavItem({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        "group relative block shrink-0 rounded-md px-4 py-2 pb-1.5 font-medium transition-colors " +
+        (active ? "text-blue-600" : "text-slate-800 hover:text-blue-600 hover:bg-slate-100")
+      }
+    >
+      {label}
+      {/* Линия как в main nav: из центра, 200ms ease-out, bg-blue-500 */}
+      <span
+        className={
+          "absolute left-1/2 -translate-x-1/2 -bottom-0.5 h-0.5 rounded-full bg-blue-500 transition-all duration-200 ease-out " +
+          (active ? "w-full" : "w-0 group-hover:w-full")
+        }
+        aria-hidden
+      />
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------
+   AddObjectPilotModal — финальная точка воронки владельца, сбор интереса.
+   Лёгкий MVP/финтех стиль: воздух, галочки, спокойная типографика.
+------------------------------------------------------------------ */
+const PILOT_MODAL_ITEMS = [
+  "Вы в списке владельцев, заинтересованных в запуске",
+  "Мы свяжемся с вами перед стартом пилота",
+  "Никаких обязательств на этом этапе",
+];
+
+function AddObjectPilotModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null;
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+      onClick={handleOverlayClick}
+    >
+      <div
+        className="w-full max-w-md rounded-xl border border-slate-200/80 bg-white p-8 shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <h2 className="text-lg font-medium text-slate-900">Проект в тестовом запуске</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            aria-label="Закрыть"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <p className="mt-5 text-sm text-slate-700 leading-relaxed">
+          Betwix сейчас находится на стадии тестирования. Мы собираем интерес владельцев, чтобы запустить пилот
+          с управляющей компанией и первыми объектами.
+        </p>
+        <p className="mt-3 text-sm text-slate-700 leading-relaxed">
+          Спасибо за ваш интерес — мы уведомим вас, когда добавление объектов станет доступно.
+        </p>
+        <div className="mt-6">
+          <p className="text-sm font-medium text-slate-900 mb-3">Что это значит</p>
+          <ul className="space-y-2.5">
+            {PILOT_MODAL_ITEMS.map((text, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-slate-700 leading-relaxed">
+                <CheckCircle className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" aria-hidden />
+                <span>{text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="mt-5 text-xs text-slate-500 leading-relaxed">
+          Добавление объектов и юридические условия будут доступны после запуска пилота.
+        </p>
+        <div className="mt-7 flex flex-wrap gap-3">
+          <Button
+            variant="primary"
+            className="rounded-full"
+            onClick={onClose}
+          >
+            Понятно, жду уведомление
+          </Button>
+          <Button variant="secondary" className="rounded-full text-slate-700 hover:bg-slate-100" onClick={onClose}>
+            Закрыть
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SubNav({
   section,
   setSection,
@@ -734,23 +987,14 @@ function SubNav({
     <div className="mx-auto max-w-[1280px] px-6">
       <div className="flex flex-nowrap items-end justify-between gap-4 py-4 border-b border-slate-100">
         <div className="flex flex-wrap items-center gap-1 min-w-0">
-          {items.map((it) => {
-            const active = section === it.id;
-            return (
-              <button
-                key={it.id}
-                onClick={() => setSection(it.id)}
-                className={
-                  "relative px-4 py-2 text-sm font-medium transition shrink-0 " +
-                  (active
-                    ? "text-blue-600 border-b-2 border-blue-600 -mb-px"
-                    : "text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded")
-                }
-              >
-                {it.label}
-              </button>
-            );
-          })}
+          {items.map((it) => (
+            <OwnerSubNavItem
+              key={it.id}
+              active={section === it.id}
+              onClick={() => setSection(it.id)}
+              label={it.label}
+            />
+          ))}
         </div>
         {right ? <div className="flex items-center gap-3 shrink-0">{right}</div> : null}
       </div>
@@ -764,8 +1008,33 @@ function SubNav({
 
 export default function OwnerDashboard() {
   const location = useLocation();
+  const { setUserFinancials } = useAuth();
   const [section, setSection] = useState<Section>("dashboard");
   const [period, setPeriod] = useState<Period>("month");
+  const [addObjectModalOpen, setAddObjectModalOpen] = useState(false);
+
+  // Zero balance when no objects; store in EUR, sync both EUR and USD for display
+  const objectCount = MOCK_OBJECTS.length;
+  useEffect(() => {
+    if (objectCount === 0) {
+      setUserFinancials({
+        balanceUsd: 0,
+        availableUsd: 0,
+        balanceEur: 0,
+        availableEur: 0,
+      });
+      return;
+    }
+    const totalEur = MOCK_ACCOUNT_EUR.balance;
+    const availableEur = MOCK_ACCOUNT_EUR.available;
+    const rateUsd = 1.08;
+    setUserFinancials({
+      balanceEur: totalEur,
+      availableEur,
+      balanceUsd: Math.round(totalEur * rateUsd * 100) / 100,
+      availableUsd: Math.round(availableEur * rateUsd * 100) / 100,
+    });
+  }, [setUserFinancials, objectCount]);
 
   useEffect(() => {
     const state = location.state as { openSection?: Section } | null;
@@ -773,6 +1042,10 @@ export default function OwnerDashboard() {
       setSection(state.openSection);
     }
   }, [location.state]);
+
+  const handleAddObject = () => {
+    setAddObjectModalOpen(true);
+  };
 
   const topBarRight =
     section === "dashboard" ? (
@@ -786,8 +1059,9 @@ export default function OwnerDashboard() {
           </TabsList>
         </Tabs>
         <Button
-          className="rounded-full bg-blue-600 px-4 hover:bg-blue-700 shrink-0"
-          onClick={() => setSection("dashboard")}
+          variant="outline"
+          className="rounded-full border-slate-300 text-slate-700 hover:bg-slate-50 shrink-0"
+          onClick={handleAddObject}
         >
           <Plus className="mr-2 h-4 w-4" /> Добавить объект
         </Button>
@@ -799,12 +1073,13 @@ export default function OwnerDashboard() {
       <SubNav section={section} setSection={setSection} right={topBarRight} />
 
       <div className="mx-auto max-w-[1280px] px-6 pb-10">
-        {section === "dashboard" && <DashboardSection onNavigate={setSection} period={period} />}
-        {section === "management" && <ManagementSection />}
+        {section === "dashboard" && <DashboardSection onNavigate={setSection} period={period} onAddObject={handleAddObject} />}
+        {section === "management" && <ManagementSection onAddObject={handleAddObject} />}
         {section === "notifications" && <NotificationsSection />}
-        {section === "documents" && <DocumentsSection />}
+        {section === "documents" && <DocumentsSection onAddObject={handleAddObject} />}
         {section === "settings" && <SettingsSection />}
       </div>
+      <AddObjectPilotModal open={addObjectModalOpen} onClose={() => setAddObjectModalOpen(false)} />
     </div>
   );
 }
@@ -816,18 +1091,24 @@ export default function OwnerDashboard() {
 type DashboardSectionProps = {
   onNavigate: (s: Section) => void;
   period: Period;
+  onAddObject: () => void;
 };
 
 const CHART_YEARS = [2022, 2023, 2024];
 const CHART_INCOME_USD = [890000, 1020000, 1120000];
 const CHART_YIELD_PCT = [5.2, 6.1, 6.5];
 
-function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
+// Temporary flag for empty state demo
+const demoEmptyOwner = true; // Set to false to show normal dashboard
+
+function DashboardSection({ onNavigate, period, onAddObject }: DashboardSectionProps) {
   const navigate = useNavigate();
   const [previewTab, setPreviewTab] = useState<"objects" | "operations">("objects");
   const [chartMode, setChartMode] = useState<"usd" | "pct">("usd");
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<SummaryData>(PERIOD_SUMMARIES[period]);
+  
+  const hasObjects = !demoEmptyOwner && MOCK_OBJECTS.length > 0;
 
   const periodLabel = useMemo(() => {
     if (period === "month") return "месяц";
@@ -859,7 +1140,7 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
         <div className={muted ? "text-slate-500" : "text-slate-800"}>{label}</div>
         <div className={muted ? "text-slate-600 font-medium" : "text-slate-900 font-semibold"}>{money(amount)}</div>
       </div>
-      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+      <div className="h-2 rounded-full bg-slate-50 overflow-hidden">
         <div className="h-full bg-blue-600" style={{ width: `${Math.max(3, Math.min(100, widthPct))}%` }} />
       </div>
     </div>
@@ -867,33 +1148,211 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
 
   return (
     <div className="space-y-6">
-      <SectionShell>
-        {/* KPI tiles (4 cards, same layout as Investor cabinet) */}
-        <div className={"relative grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 transition-opacity " + (loading ? "opacity-60 pointer-events-none" : "")}>
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center z-10">
-              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+      {/* Hero block for empty state */}
+      {!hasObjects && (
+        <SoftCard>
+          <div className="p-8 space-y-6">
+            <div className="space-y-3">
+              <h2 className="text-2xl font-semibold text-slate-900">
+                Добавьте объект — управляющая компания подготовит расчёт
+              </h2>
+              <p className="text-base text-slate-600">
+                Мы помогаем подготовить объект к запуску и инвестированию — от расчётов до выхода на платформу
+              </p>
             </div>
-          )}
-          <OwnerMetricCard title="Годовой доход" value={money(summary.annualIncome)} hint={`за ${periodLabel}`} />
-          <OwnerMetricCard title="Доход в месяц" value={money(summary.monthlyIncome)} hint="в среднем" />
-          <OwnerMetricCard
-            title="Рост доходности"
-            value={`${summary.growthPct >= 0 ? "+" : ""}${summary.growthPct}%`}
-            hint="YoY"
-            hintDanger={summary.growthPct < 0}
-          />
-          <OwnerMetricCard
-            title="Потенциал vs факт"
-            value={money(summary.potentialVsFact)}
-            hint="дельта в $"
-          />
-        </div>
-        <p className="mt-2 text-xs text-slate-500">Итоги за выбранный период</p>
+            
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 shrink-0">
+                <span className="text-sm font-medium text-slate-700">УК-партнёр:</span>
+                <span className="text-sm font-semibold text-slate-900">GreenStone</span>
+                <CheckCircle className="h-4 w-4 text-blue-600 shrink-0" />
+                <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-50 text-xs">Verified</Badge>
+              </div>
+              <Button
+                onClick={onAddObject}
+                className="!bg-blue-600 !text-white rounded-full px-4 py-2 text-sm font-medium transition-colors hover:!bg-blue-700 shrink-0 w-fit sm:ml-0"
+              >
+                <Plus className="mr-1.5 h-4 w-4" /> Добавить объект
+              </Button>
+            </div>
+            
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-8">
+              {/* Left column — сравнение (основное внимание) */}
+              <div className="flex-1 min-w-0">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Кредит на новый объект</h4>
+                    <ul className="space-y-1.5 text-sm text-slate-600">
+                      <li className="flex items-center gap-2">
+                        <span className="text-slate-400">×</span>
+                        Банк и проверки
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-slate-400">×</span>
+                        Много документов
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-slate-400">×</span>
+                        Проценты и долг
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-slate-400">×</span>
+                        Вся аренда уходит на выплаты
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-slate-400">×</span>
+                        Частые отказы
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-slate-400">×</span>
+                        Медленно и рискованно
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-blue-600 mb-2">Модель Betwix</h4>
+                    <ul className="space-y-1.5 text-sm text-slate-700">
+                      <li className="flex items-center gap-2">
+                        <span className="text-blue-500">✓</span>
+                        Без кредита
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-blue-500">✓</span>
+                        Без продажи собственности
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-blue-500">✓</span>
+                        Продаётся только часть будущего дохода
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-blue-500">✓</span>
+                        Инвесторы вместо банка
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-blue-500">✓</span>
+                        Покупка следующего объекта через УК
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-blue-500">✓</span>
+                        У вас 2 объекта вместо 1
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
+                  <p className="text-sm font-medium text-slate-800">
+                    Вы масштабируете арендный бизнес, не беря долг и не теряя объект.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/owner/how-it-works")}
+                    className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-blue-600 hover:underline shrink-0"
+                  >
+                    Как это работает
+                    <ArrowRight className="h-4 w-4 shrink-0" />
+                  </button>
+                </div>
+              </div>
 
-        {/* Main column + Right sidebar */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="flex flex-col gap-4 lg:col-span-2">
+              {/* Right column — компактный блок */}
+              <div className="shrink-0 flex flex-col gap-4 lg:w-72 lg:pl-6 lg:border-l lg:border-slate-200">
+                <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3 space-y-3">
+                  <h4 className="text-xs font-semibold text-slate-700">После добавления объекта вы получите</h4>
+                  <ul className="space-y-1.5">
+                    <li className="flex items-start gap-2 text-xs text-slate-600">
+                      <TrendingUp className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+                      Расчёт доходности и рисков
+                    </li>
+                    <li className="flex items-start gap-2 text-xs text-slate-600">
+                      <Users className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+                      Доступ к инвесторам платформы
+                    </li>
+                    <li className="flex items-start gap-2 text-xs text-slate-600">
+                      <Shield className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+                      Юридическую и финансовую структуру
+                    </li>
+                    <li className="flex items-start gap-2 text-xs text-slate-600">
+                      <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+                      Сопровождение до запуска объекта
+                    </li>
+                  </ul>
+                  <div className="text-xs text-slate-500 pt-1">120+ объектов · €340M под управлением</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* 3-step timeline */}
+            <div id="how-it-works" className="pt-6 border-t border-slate-100">
+              <div className="flex flex-col gap-6 md:flex-row md:items-center md:gap-4">
+                <div className="flex gap-4 flex-1 min-w-0">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold text-sm">
+                    1
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-sm font-semibold text-slate-900">Заполните данные объекта</div>
+                    <div className="text-xs text-slate-500">3–5 мин</div>
+                  </div>
+                </div>
+                <div className="hidden md:flex items-center flex-shrink-0 px-2 text-slate-400" aria-hidden>
+                  <ArrowRight className="h-5 w-5 shrink-0" strokeWidth={2} />
+                </div>
+                <div className="flex gap-4 flex-1 min-w-0">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold text-sm">
+                    2
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-sm font-semibold text-slate-900">УК сделает расчёт доходности и рисков</div>
+                    <div className="text-xs text-slate-500">Автоматически</div>
+                  </div>
+                </div>
+                <div className="hidden md:flex items-center flex-shrink-0 px-2 text-slate-400" aria-hidden>
+                  <ArrowRight className="h-5 w-5 shrink-0" strokeWidth={2} />
+                </div>
+                <div className="flex gap-4 flex-1 min-w-0">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold text-sm">
+                    3
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-sm font-semibold text-slate-900">Мы свяжемся с вами и запустим объект</div>
+                    <div className="text-xs text-slate-500">В течение 24 часов</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </SoftCard>
+      )}
+      
+      <SectionShell>
+        {/* KPI tiles (4 cards, same layout as Investor cabinet) - hidden in empty state */}
+        {hasObjects && (
+          <>
+            <div className={"relative grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 transition-opacity " + (loading ? "opacity-60 pointer-events-none" : "")}>
+              {loading && (
+                <div className="absolute inset-0 flex items-center justify-center z-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                </div>
+              )}
+              <OwnerMetricCard title="Годовой доход" value={money(summary.annualIncome)} hint={`за ${periodLabel}`} />
+              <OwnerMetricCard title="Доход в месяц" value={money(summary.monthlyIncome)} hint="в среднем" />
+              <OwnerMetricCard
+                title="Рост доходности"
+                value={`${summary.growthPct >= 0 ? "+" : ""}${summary.growthPct}%`}
+                hint="YoY"
+                hintDanger={summary.growthPct < 0}
+              />
+              <OwnerMetricCard
+                title="Потенциал vs факт"
+                value={money(summary.potentialVsFact)}
+                hint="дельта в $"
+              />
+            </div>
+            <p className="mt-2 text-xs text-slate-500">Итоги за выбранный период</p>
+          </>
+        )}
+
+        {/* Main column - full width */}
+        <div className="flex flex-col gap-4">
             {/* Objects & Operations (tabbed) — above Distribution */}
             <SoftCard>
               <div className="p-6 space-y-4">
@@ -920,14 +1379,16 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
                   Операции
                 </button>
                   </div>
-                  <Button
-                    variant="secondary"
-                    className="rounded-full"
-                    onClick={() => onNavigate("dashboard")}
-                  >
-                    {previewTab === "objects" ? "Все объекты" : "Все операции"}{" "}
-                    <ArrowUpRight className="ml-1 h-4 w-4" />
-                  </Button>
+                  {hasObjects && (
+                    <Button
+                      variant="secondary"
+                      className="rounded-full"
+                      onClick={() => onNavigate("dashboard")}
+                    >
+                      {previewTab === "objects" ? "Все объекты" : "Все операции"}{" "}
+                      <ArrowUpRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
 
                 {previewTab === "objects" && (
@@ -944,7 +1405,24 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
                         </tr>
                       </thead>
                       <tbody>
-                    {MOCK_OBJECTS.slice(0, 4).map((o) => (
+                    {!hasObjects ? (
+                      <tr>
+                        <td colSpan={6} className="p-12 text-center">
+                          <div className="flex flex-col items-center gap-4">
+                            <p className="text-sm text-slate-500">Пока нет объектов</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={onAddObject}
+                              className="rounded-full border-slate-300 text-slate-600 hover:bg-slate-50"
+                            >
+                              <Plus className="mr-1.5 h-3.5 w-3.5" /> Добавить объект
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      MOCK_OBJECTS.slice(0, 4).map((o) => (
                       <tr
                         key={o.id}
                         className="border-t border-slate-100 hover:bg-slate-50/60 transition cursor-pointer"
@@ -1009,7 +1487,8 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
                               </div>
                             </td>
                           </tr>
-                        ))}
+                        ))
+                      )}
                       </tbody>
                     </table>
                   </div>
@@ -1031,7 +1510,14 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {MOCK_TX.slice(0, 5).map((t) => (
+                        {!hasObjects ? (
+                          <tr>
+                            <td colSpan={8} className="p-12 text-center">
+                              <p className="text-sm text-slate-500">Появится после запуска объекта</p>
+                            </td>
+                          </tr>
+                        ) : (
+                          MOCK_TX.slice(0, 5).map((t) => (
                           <tr key={t.id} className="border-t border-slate-100 hover:bg-slate-50/60 transition">
                             <td className="p-3">{t.date}</td>
                             <td className="p-3 font-medium text-slate-900">{txLabel(t.type)}</td>
@@ -1052,7 +1538,8 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
                             </td>
                             <td className="p-3">{money(t.balanceAfter)}</td>
                           </tr>
-                        ))}
+                        ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -1060,8 +1547,9 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
               </div>
             </SoftCard>
 
-            {/* Доход объекта во времени (Income Chart) */}
-            <SoftCard>
+            {/* Доход объекта во времени (Income Chart) - hidden in empty state */}
+            {hasObjects && (
+              <SoftCard>
               <div className="p-6 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="text-lg font-semibold text-slate-900">Доход объекта во времени</div>
@@ -1093,11 +1581,14 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
                     const val = chartMode === "usd" ? CHART_INCOME_USD[i] : CHART_YIELD_PCT[i];
                     const max = chartMode === "usd" ? Math.max(...CHART_INCOME_USD) : Math.max(...CHART_YIELD_PCT);
                     const pct = max > 0 ? (val / max) * 100 : 0;
+                    const isLastYear = i === CHART_YEARS.length - 1;
                     return (
                       <div key={y} className="flex-1 flex flex-col items-center gap-2">
                         <div className="w-full h-32 rounded-t bg-slate-100 overflow-hidden flex flex-col justify-end">
                           <div
-                            className="w-full bg-blue-600 transition-all"
+                            className={`w-full transition-all ${
+                              isLastYear ? "bg-blue-600" : "bg-blue-400"
+                            }`}
                             style={{ height: `${Math.max(8, pct)}%` }}
                           />
                         </div>
@@ -1109,11 +1600,37 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
                     );
                   })}
                 </div>
+                {/* KPI row under chart */}
+                <div className="flex items-center gap-6 pt-4 border-t border-slate-100">
+                  <div className="flex-1">
+                    <div className="text-xs text-slate-500">Годовой доход</div>
+                    <div className="mt-0.5 text-sm font-semibold text-slate-900">{money(summary.annualIncome)}</div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs text-slate-500">Δ YoY</div>
+                    <div
+                      className={`mt-0.5 text-sm font-semibold ${
+                        summary.growthPct >= 0 ? "text-blue-600" : "text-amber-700"
+                      }`}
+                    >
+                      {summary.growthPct >= 0 ? "+" : ""}
+                      {summary.growthPct}%
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs text-slate-500">Кол-во инвесторов</div>
+                    <div className="mt-0.5 text-sm font-semibold text-slate-900">
+                      {summary.investors.toLocaleString("ru-RU")}
+                    </div>
+                  </div>
+                </div>
               </div>
             </SoftCard>
+            )}
 
-            {/* Распределение аренды (Distribution) */}
-            <SoftCard>
+            {/* Распределение аренды (Distribution) - hidden in empty state */}
+            {hasObjects && (
+              <SoftCard>
               <div className="p-6 space-y-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div>
@@ -1134,121 +1651,8 @@ function DashboardSection({ onNavigate, period }: DashboardSectionProps) {
                 <div className="text-xs text-slate-500">Подсказка: удержания и распределения считаются от фактически собранной аренды.</div>
               </div>
             </SoftCard>
+            )}
           </div>
-
-          <div className="space-y-4">
-            {/* Account sidebar */}
-            <SoftCard>
-              <div className="p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                    <Wallet className="h-4 w-4 text-slate-500" /> Лицевой счёт
-                  </div>
-                  <Badge className="bg-slate-100 text-slate-700">USD</Badge>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-slate-200 p-3">
-                    <div className="text-xs text-slate-500">Баланс</div>
-                    <div className="mt-1 text-lg font-semibold">{money(MOCK_ACCOUNT.balance)}</div>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 p-3">
-                    <div className="text-xs text-slate-500">Доступно</div>
-                    <div className="mt-1 text-lg font-semibold">{money(MOCK_ACCOUNT.available)}</div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-200 p-3">
-                  <div className="text-xs text-slate-500">Начислено с аренды</div>
-                  <div className="mt-1 text-lg font-semibold text-emerald-700">+{money(MOCK_ACCOUNT.rentDelta)}</div>
-                  <div className="mt-1 text-xs text-slate-500">RE-APT · №12 · 24 Jan 2026</div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button className="flex-1 rounded-full bg-blue-600 hover:bg-blue-700">Пополнить</Button>
-                  <Button variant="outline" className="flex-1 rounded-full">Вывести</Button>
-                </div>
-              </div>
-            </SoftCard>
-
-            {/* Liquidity */}
-            <SoftCard>
-              <div className="p-5 space-y-2">
-                <div
-                  className="text-sm font-semibold text-slate-900"
-                  title="Влияет на скорость продаж долей инвесторами"
-                >
-                  Ликвидность
-                </div>
-                <div className="text-base font-medium text-slate-700">
-                  {(() => {
-                    const liq = MOCK_OBJECTS.filter((o) => o.liquidity).map((o) => o.liquidity!);
-                    const high = liq.filter((l) => l === "Высокая").length;
-                    const low = liq.filter((l) => l === "Низкая").length;
-                    if (high >= 2) return "Высокая";
-                    if (low >= 2) return "Низкая";
-                    return "Средняя";
-                  })()}
-                </div>
-                <p className="text-xs text-slate-500" title="Влияет на скорость продаж долей инвесторами">
-                  Влияет на скорость продаж долей инвесторами
-                </p>
-              </div>
-            </SoftCard>
-
-            {/* Risks — только факты */}
-            <SoftCard>
-              <div className="p-5 space-y-3">
-                <div className="text-sm font-semibold text-slate-900">Риски</div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Vacancy rate</span>
-                    <span className="font-medium text-slate-900">
-                      {(
-                        100 -
-                        MOCK_OBJECTS.reduce((s, o) => s + o.occupancyPct, 0) / MOCK_OBJECTS.length
-                      ).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Свободная площадь</span>
-                    <span className="font-medium text-slate-900">120 м²</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Потерянный доход</span>
-                    <span className="font-medium text-rose-600">{money(12400)}</span>
-                  </div>
-                </div>
-              </div>
-            </SoftCard>
-
-            {/* УК */}
-            <SoftCard>
-              <div className="p-5 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-slate-900">УК:</span>
-                  <span className="text-sm font-medium text-slate-700">
-                    {MOCK_MGMT[0]?.name ?? "GreenStone"}
-                  </span>
-                  {(MOCK_MGMT[0]?.verified ?? true) && (
-                    <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onNavigate("documents")}
-                  className="text-sm text-blue-600 hover:underline text-left"
-                >
-                  Перейти к отчётам УК
-                </button>
-              </div>
-            </SoftCard>
-
-            {/* News / Events (compact sidebar) */}
-            <NewsEventsSidebar onNavigate={onNavigate} />
-
-          </div>
-        </div>
       </SectionShell>
     </div>
   );
@@ -1274,173 +1678,673 @@ function OwnerMetricCard({
   );
 }
 
-function ManagementSection() {
-  return (
-    <SectionShell title="Управляющие компании" subtitle="Контроль УК, отчётности и комиссий">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {MOCK_MGMT.map((c) => (
-          <SoftCard key={c.id}>
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-slate-500" />
-                  <div className="font-semibold text-slate-900">{c.name}</div>
-                  {c.verified ? (
-                    <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-50">Verified</Badge>
-                  ) : null}
-                </div>
-                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                  Подробнее
-                </Button>
-              </div>
+// Вывод статуса УК для карточки: Verified / Under review / Risk + подсказка
+function getMgmtStatus(c: MgmtItem): { label: MgmtStatusLabel; tooltip: string } {
+  const hasRisk = c.reportsStatus === "pending" && (c.incidentsCount ?? 0) > 0;
+  if (hasRisk) return { label: "Risk", tooltip: "Есть просрочки отчётности или инциденты. Рекомендуется обратить внимание." };
+  if (c.verified && c.reportsStatus === "ok")
+    return { label: "Verified", tooltip: "УК проверена платформой, отчётность в срок." };
+  if (c.verified)
+    return { label: "Under review", tooltip: "УК проверена. Ожидается отчёт или идёт проверка данных." };
+  return { label: "Under review", tooltip: "УК на проверке платформой." };
+}
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-slate-500">Объектов</div>
-                  <div className="font-semibold text-slate-900">{c.objects}</div>
-                </div>
-                <div>
-                  <div className="text-slate-500">Собрано аренды</div>
-                  <div className="font-semibold text-slate-900">{money(c.rentCollected)}</div>
-                </div>
-                <div>
-                  <div className="text-slate-500">Комиссия УК</div>
-                  <div className="font-semibold text-slate-900">{money(c.feeTotal)}</div>
-                </div>
-                <div>
-                  <div className="text-slate-500">Отчётность</div>
-                  <div className={c.reportsStatus === "ok" ? "text-emerald-700 font-semibold" : "text-red-700 font-semibold"}>
-                    {c.reportsStatus === "ok" ? "Вовремя" : "Просрочка"}
+/* ------------------------------------------------------------------
+   Management — панель контроля качества управления объектами.
+   Не справочник УК: доверие, контроль, дисциплина, выбор другой УК, empty state.
+------------------------------------------------------------------ */
+
+function ManagementSection({ onAddObject }: { onAddObject: () => void }) {
+  const navigate = useNavigate();
+  const connectedUk = MOCK_MGMT;
+  const otherUk = MOCK_OTHER_MGMT;
+  const hasUk = connectedUk.length > 0;
+
+  return (
+    <SectionShell
+      title="Управляющие компании"
+      subtitle="Контроль управления, отчётности и дисциплины по вашим объектам"
+    >
+      <div className="grid grid-cols-1 gap-6 max-w-4xl">
+        {/* Основные УК (подключённые) — KPI-блоки */}
+        {hasUk && (
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Подключённые УК</h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {connectedUk.map((c) => {
+                const status = getMgmtStatus(c);
+                return (
+                  <SoftCard key={c.id}>
+                    <div className="p-6 space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Building2 className="h-5 w-5 text-slate-500 shrink-0" aria-hidden />
+                          <span className="font-semibold text-slate-900">{c.name}</span>
+                          <Badge
+                            title={status.tooltip}
+                            className={
+                              "shrink-0 " +
+                              (status.label === "Verified"
+                                ? "bg-blue-50 text-blue-700 hover:bg-blue-50"
+                                : status.label === "Risk"
+                                ? "bg-rose-50 text-rose-700 hover:bg-rose-50"
+                                : "bg-slate-100 text-slate-700 hover:bg-slate-100")
+                            }
+                          >
+                            {status.label}
+                          </Badge>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-full text-blue-600 hover:text-blue-700 shrink-0"
+                          onClick={() => navigate("/owner")}
+                        >
+                          Подробнее
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <div className="text-slate-500">Объектов</div>
+                          <div className="font-semibold text-slate-900">{c.objects}</div>
+                        </div>
+                        <div>
+                          <div className="text-slate-500">Собрано аренды</div>
+                          <div className="font-semibold text-slate-900">{money(c.rentCollected)}</div>
+                        </div>
+                        <div>
+                          <div className="text-slate-500">Комиссия УК</div>
+                          <div className="font-semibold text-slate-900">{money(c.feeTotal)}</div>
+                        </div>
+                        <div>
+                          <div className="text-slate-500">Отчётность</div>
+                          <div
+                            className={
+                              c.reportsStatus === "ok"
+                                ? "text-emerald-700 font-semibold"
+                                : "text-rose-600 font-semibold"
+                            }
+                          >
+                            {c.reportsStatus === "ok" ? "Вовремя" : "Просрочка"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-100 pt-3 space-y-1 text-sm">
+                        <div className="flex justify-between text-slate-600">
+                          <span>Последний отчёт</span>
+                          <span className="text-slate-900">{c.lastReportDate ?? "—"}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>Инциденты (простой / задержки)</span>
+                          <span className="text-slate-900">{c.incidentsCount ?? 0}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          className="rounded-full"
+                          size="sm"
+                          onClick={() => navigate("/owner")}
+                        >
+                          Объекты
+                        </Button>
+                        <Button variant="outline" className="rounded-full" size="sm">
+                          Отчёты
+                        </Button>
+                        <Button variant="outline" className="rounded-full" size="sm">
+                          Договор
+                        </Button>
+                      </div>
+                    </div>
+                  </SoftCard>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Инфо-блок: почему УК обязательна */}
+        <SoftCard className="border-blue-100 bg-blue-50/40">
+          <div className="p-6 flex gap-4">
+            <Shield className="h-8 w-8 text-blue-600 flex-shrink-0 mt-0.5" aria-hidden />
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Почему управление через УК обязательно</h3>
+              <p className="text-sm text-slate-700 mb-2">
+                Управляющая компания обеспечивает: прозрачность доходов, контроль простоя и расходов,
+                корректную отчётность для инвесторов. Это защищает владельца, инвесторов и платформу
+                и является обязательной частью модели Betwix.
+              </p>
+            </div>
+          </div>
+        </SoftCard>
+
+        {/* Другие УК — выбор для новых объектов / заявка */}
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900 mb-1">Другие управляющие компании</h2>
+          <p className="text-sm text-slate-600 mb-4">
+            Вы можете выбрать другую УК для новых объектов или подать заявку на подключение своей.
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {otherUk.map((uk) => (
+              <SoftCard key={uk.id} className="flex flex-col">
+                <div className="p-4 space-y-3 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-slate-900">{uk.name}</span>
+                    <Badge
+                      className={
+                        uk.status === "verified"
+                          ? "bg-blue-50 text-blue-700 hover:bg-blue-50"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-100"
+                      }
+                    >
+                      {uk.status === "verified" ? "Verified" : "In review"}
+                    </Badge>
+                  </div>
+                  {uk.specialization && (
+                    <p className="text-xs text-slate-500">{uk.specialization}</p>
+                  )}
+                  <div className="flex flex-wrap gap-2 mt-auto pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full text-sm"
+                      onClick={() => navigate("/owner")}
+                    >
+                      Выбрать для объекта
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-full text-sm text-slate-600"
+                      onClick={() => {}}
+                    >
+                      Подать заявку
+                    </Button>
                   </div>
                 </div>
-              </div>
+              </SoftCard>
+            ))}
+          </div>
+        </div>
 
+        {/* CTA-блок — только когда уже есть УК (масштабирование) */}
+        {hasUk && (
+          <SoftCard>
+            <div className="p-6 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="font-medium text-slate-900">Масштабирование</p>
+                <p className="text-sm text-slate-600 mt-0.5">Добавьте объект и выберите УК для него.</p>
+              </div>
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" className="rounded-full" size="sm">
-                  Объекты
+                <Button
+                  className="rounded-full bg-blue-600 hover:bg-blue-700"
+                  onClick={onAddObject}
+                >
+                  <Plus className="h-4 w-4 mr-1.5" aria-hidden />
+                  Добавить объект и выбрать УК
                 </Button>
-                <Button variant="outline" className="rounded-full" size="sm">
-                  Отчёты
-                </Button>
-                <Button variant="outline" className="rounded-full" size="sm">
-                  Договор
+                <Button
+                  variant="secondary"
+                  className="rounded-full"
+                  onClick={() => navigate("/owner/how-it-works")}
+                >
+                  Подать заявку на подключение своей УК
                 </Button>
               </div>
             </div>
           </SoftCard>
-        ))}
+        )}
+
+        {/* Empty state: когда у пользователя ещё нет УК */}
+        {!hasUk && (
+          <SoftCard>
+            <div className="p-8 text-center space-y-4">
+              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mx-auto">
+                <Building2 className="h-6 w-6" aria-hidden />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Управляющая компания подключается после добавления объекта</h3>
+                <p className="text-sm text-slate-600 mt-1 max-w-md mx-auto">
+                  УК отвечает за аренду, отчётность и операционное управление. Вы контролируете показатели в этом разделе.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <Button
+                  className="rounded-full bg-blue-600 hover:bg-blue-700"
+                  onClick={onAddObject}
+                >
+                  <Plus className="h-4 w-4 mr-1.5" aria-hidden />
+                  Добавить объект
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="rounded-full"
+                  onClick={() => navigate("/owner/how-it-works")}
+                >
+                  Как работает управление через УК
+                </Button>
+              </div>
+            </div>
+          </SoftCard>
+        )}
       </div>
     </SectionShell>
   );
 }
 
+/* ------------------------------------------------------------------
+   Notifications — хроника событий арендного бизнеса (business news feed).
+   Не inbox и не alert-list: поиск, фильтры по датам/типу/важности/объекту/УК,
+   лента с группировкой по датам, одна запись = маркер + заголовок + мета + описание + действия.
+------------------------------------------------------------------ */
+
+const FEED_TODAY_REF = "2026-01-20"; // опорная «сегодня» для группировки
+
+type DateRangeKey = "today" | "7d" | "30d" | "custom";
+
 function NotificationsSection() {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState<DateRangeKey>("30d");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [filterType, setFilterType] = useState<FeedItemType | "">("");
+  const [filterImportance, setFilterImportance] = useState<FeedImportance | "">("");
+  const [filterObject, setFilterObject] = useState("");
+  const [filterMgmt, setFilterMgmt] = useState("");
 
-  const news = MOCK_NEWS;
-  const notifications = MOCK_NOTIFICATIONS;
+  // Бизнес-логика: один список записей, фильтрация по поиску, дате, типу, важности, объекту, УК
+  const allItems = MOCK_FEED;
+  const uniqueObjects = useMemo(() => Array.from(new Set(allItems.map((i) => i.object).filter(Boolean))) as string[], [allItems]);
+  const uniqueMgmt = useMemo(() => Array.from(new Set(allItems.map((i) => i.mgmt).filter(Boolean))) as string[], [allItems]);
 
-  const allDates = Array.from(
-    new Set([...notifications.map((n) => n.date), ...news.map((n) => n.date)])
-  ).sort((a, b) => (a < b ? 1 : -1));
+  const filtered = useMemo(() => {
+    let list = [...allItems];
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (i) =>
+          i.title.toLowerCase().includes(q) ||
+          i.description.toLowerCase().includes(q) ||
+          (i.object?.toLowerCase().includes(q)) ||
+          (i.mgmt?.toLowerCase().includes(q)) ||
+          (i.amount != null && String(i.amount).includes(q))
+      );
+    }
+    const now = new Date(FEED_TODAY_REF);
+    const todayStr = now.toISOString().slice(0, 10);
+    const past = (days: number) => {
+      const d = new Date(now);
+      d.setDate(d.getDate() - days);
+      return d.toISOString().slice(0, 10);
+    };
+    let from = todayStr;
+    let to = todayStr;
+    if (dateRange === "today") {
+      from = to = todayStr;
+    } else if (dateRange === "7d") {
+      from = past(7);
+      to = todayStr;
+    } else if (dateRange === "30d") {
+      from = past(30);
+      to = todayStr;
+    } else if (dateRange === "custom" && customFrom && customTo) {
+      from = customFrom;
+      to = customTo;
+    }
+    list = list.filter((i) => i.date >= from && i.date <= to);
+    if (filterType) list = list.filter((i) => i.type === filterType);
+    if (filterImportance) list = list.filter((i) => i.importance === filterImportance);
+    if (filterObject) list = list.filter((i) => i.object === filterObject);
+    if (filterMgmt) list = list.filter((i) => i.mgmt === filterMgmt);
+    return list.sort((a, b) => (b.date < a.date ? -1 : b.date > a.date ? 1 : 0));
+  }, [allItems, searchQuery, dateRange, customFrom, customTo, filterType, filterImportance, filterObject, filterMgmt]);
 
-  const filteredNotifications = selectedDate
-    ? notifications.filter((n) => n.date === selectedDate)
-    : notifications;
-
-  const filteredNews = selectedDate ? news.filter((n) => n.date === selectedDate) : news;
+  const groupedByDate = useMemo(() => {
+    const groups: { label: string; items: FeedItem[] }[] = [];
+    let currentLabel = "";
+    for (const item of filtered) {
+      const label = feedDateGroupLabel(item.date, FEED_TODAY_REF);
+      if (label !== currentLabel) {
+        currentLabel = label;
+        groups.push({ label, items: [] });
+      }
+      groups[groups.length - 1].items.push(item);
+    }
+    return groups;
+  }, [filtered]);
 
   return (
     <SectionShell
       title="Уведомления"
-      subtitle="Единый центр событий и новостей с фильтрацией по датам"
+      subtitle="Хроника событий, новостей и сигналов по вашему арендному бизнесу"
     >
-      <SoftCard>
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarDays className="h-4 w-4 text-slate-500" />
-            <div className="text-sm font-semibold text-slate-900">Календарь</div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              className={
-                "rounded-full " +
-                (!selectedDate
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50")
-              }
-              onClick={() => setSelectedDate(null)}
-            >
-              Все даты
-            </Button>
-            {allDates.map((d) => (
-              <Button
-                key={d}
-                size="sm"
-                className={
-                  "rounded-full " +
-                  (selectedDate === d
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50")
-                }
-                onClick={() => setSelectedDate(d)}
-              >
-                {d}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </SoftCard>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="space-y-4 max-w-4xl">
+        {/* Панель управления лентой */}
         <SoftCard>
-          <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="text-lg font-semibold text-slate-900">Важные события</div>
-              <div className="text-xs text-slate-500">{selectedDate ? selectedDate : "Все"}</div>
-            </div>
-            {filteredNotifications.length === 0 ? (
-              <div className="text-sm text-slate-500">Нет событий на выбранную дату</div>
-            ) : (
-              <div className="space-y-3">
-                {filteredNotifications.map((n) => (
-                  <div
-                    key={n.id}
-                    className={
-                      "rounded-xl border p-3 bg-white " +
-                      (n.type === "danger"
-                        ? "border-red-200"
-                        : n.type === "warning"
-                        ? "border-amber-200"
-                        : "border-slate-200")
-                    }
-                  >
-                    <div className="font-semibold text-slate-900">{n.title}</div>
-                    <div className="text-sm text-slate-500">{n.text}</div>
-                    <div className="mt-1 text-xs text-slate-400">{n.date}</div>
-                  </div>
-                ))}
+          <div className="p-4 space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" aria-hidden />
+                <Input
+                  type="search"
+                  placeholder="Поиск по объекту, УК, сумме, событию"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-10 bg-white border-slate-200 rounded-lg"
+                />
               </div>
-            )}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-slate-500 shrink-0">Период:</span>
+                {(["today", "7d", "30d"] as const).map((key) => (
+                  <Button
+                    key={key}
+                    size="sm"
+                    variant={dateRange === key ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() => setDateRange(key)}
+                  >
+                    {key === "today" ? "Сегодня" : key === "7d" ? "7 дней" : "30 дней"}
+                  </Button>
+                ))}
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="date"
+                    value={customFrom}
+                    onChange={(e) => setCustomFrom(e.target.value)}
+                    className="w-36 h-9 text-sm rounded-lg border-slate-200"
+                  />
+                  <span className="text-slate-400">—</span>
+                  <Input
+                    type="date"
+                    value={customTo}
+                    onChange={(e) => setCustomTo(e.target.value)}
+                    className="w-36 h-9 text-sm rounded-lg border-slate-200"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => setDateRange("custom")}
+                  >
+                    OK
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+              <span className="text-sm text-slate-500">Тип:</span>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType((e.target.value || "") as FeedItemType | "")}
+                className="rounded-lg border border-slate-200 text-sm text-slate-700 bg-white h-9 px-2"
+              >
+                <option value="">Все</option>
+                <option value="event">События</option>
+                <option value="news">Новости</option>
+                <option value="personal">Персональные</option>
+              </select>
+              <span className="text-sm text-slate-500 ml-2">Важность:</span>
+              <select
+                value={filterImportance}
+                onChange={(e) => setFilterImportance((e.target.value || "") as FeedImportance | "")}
+                className="rounded-lg border border-slate-200 text-sm text-slate-700 bg-white h-9 px-2"
+              >
+                <option value="">Все</option>
+                <option value="Critical">Critical</option>
+                <option value="Warning">Warning</option>
+                <option value="Info">Info</option>
+              </select>
+              {uniqueObjects.length > 0 && (
+                <>
+                  <span className="text-sm text-slate-500 ml-2">Объект:</span>
+                  <select
+                    value={filterObject}
+                    onChange={(e) => setFilterObject(e.target.value)}
+                    className="rounded-lg border border-slate-200 text-sm text-slate-700 bg-white h-9 px-2 min-w-[120px]"
+                  >
+                    <option value="">Все</option>
+                    {uniqueObjects.map((o) => (
+                      <option key={o} value={o}>{o}</option>
+                    ))}
+                  </select>
+                </>
+              )}
+              {uniqueMgmt.length > 0 && (
+                <>
+                  <span className="text-sm text-slate-500 ml-2">УК:</span>
+                  <select
+                    value={filterMgmt}
+                    onChange={(e) => setFilterMgmt(e.target.value)}
+                    className="rounded-lg border border-slate-200 text-sm text-slate-700 bg-white h-9 px-2 min-w-[120px]"
+                  >
+                    <option value="">Все</option>
+                    {uniqueMgmt.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </>
+              )}
+            </div>
           </div>
         </SoftCard>
 
+        {/* Лента: группировка по датам, формат записи с маркером и действиями */}
+        {filtered.length === 0 ? (
+          <SoftCard>
+            <div className="p-10 text-center">
+              <p className="text-sm font-medium text-slate-700">
+                Здесь будет отображаться история событий, новостей и сигналов по вашему арендному бизнесу.
+              </p>
+              <p className="text-sm text-slate-500 mt-1">
+                Это нормально, лента заполняется по мере работы бизнеса.
+              </p>
+            </div>
+          </SoftCard>
+        ) : (
+          <div className="space-y-6">
+            {groupedByDate.map(({ label, items }) => (
+              <div key={label}>
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">{label}</h3>
+                <div className="space-y-0 border-l border-slate-200 pl-0">
+                  {items.map((item) => (
+                    <article
+                      key={item.id}
+                      className="flex gap-4 py-4 border-b border-slate-100 last:border-b-0"
+                    >
+                      <div
+                        className={
+                          "w-0.5 flex-shrink-0 self-stretch min-h-[60px] rounded-full " +
+                          (item.importance === "Critical"
+                            ? "bg-rose-400"
+                            : item.importance === "Warning"
+                            ? "bg-amber-400"
+                            : "bg-slate-300")
+                        }
+                        aria-hidden
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-slate-900">{item.title}</h4>
+                        <div className="flex flex-wrap gap-x-3 gap-y-0 mt-1 text-xs text-slate-500">
+                          {item.object && <span>Объект: {item.object}</span>}
+                          {item.mgmt && <span>УК: {item.mgmt}</span>}
+                          {item.amount != null && <span>{money(item.amount)}</span>}
+                          <span>{formatDateDisplay(item.date)}</span>
+                        </div>
+                        <p className="text-sm text-slate-600 mt-2">{item.description}</p>
+                        {item.actions.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {item.actions.map((a, idx) => (
+                              <Button
+                                key={idx}
+                                variant="ghost"
+                                size="sm"
+                                className="rounded-full text-blue-600 hover:text-blue-700 h-8"
+                                onClick={() => navigate("/owner")}
+                              >
+                                {a.label}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </SectionShell>
+  );
+}
+
+/* ------------------------------------------------------------------
+   Documents — информационный и доверительный экран для владельца без объектов.
+   Не файловое хранилище: объясняем, какие документы будут, когда появятся, зачем.
+   Empty state с одним главным CTA. Таблицу документов не показываем (MVP).
+------------------------------------------------------------------ */
+
+function DocumentsSection({ onAddObject }: { onAddObject: () => void }) {
+  const navigate = useNavigate();
+
+  const processSteps = [
+    "Добавление объекта",
+    "Расчёты платформы",
+    "Выбор доли",
+    "Подключение УК",
+    "Появление договоров",
+    "После запуска — отчёты и акты",
+  ];
+
+  return (
+    <SectionShell
+      title="Документы и отчётность"
+      subtitle="Юридические и финансовые документы формируются автоматически по мере работы с объектами и инвесторами."
+    >
+      <div className="grid grid-cols-1 gap-6 max-w-4xl">
+        {/* Что здесь будет — карточки категорий */}
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Что здесь будет</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <SoftCard>
+              <div className="p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-slate-500" aria-hidden />
+                  <span className="font-semibold text-slate-900">Договоры</span>
+                </div>
+                <ul className="text-sm text-slate-600 space-y-1 list-disc list-inside">
+                  <li>договор с УК</li>
+                  <li>условия участия в модели</li>
+                  <li>соглашения по объектам</li>
+                </ul>
+                <p className="text-xs text-slate-500 pt-1 border-t border-slate-100">
+                  Появляются после добавления объекта
+                </p>
+              </div>
+            </SoftCard>
+            <SoftCard>
+              <div className="p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5 text-slate-500" aria-hidden />
+                  <span className="font-semibold text-slate-900">Финансовые документы</span>
+                </div>
+                <ul className="text-sm text-slate-600 space-y-1 list-disc list-inside">
+                  <li>акты распределения дохода</li>
+                  <li>отчёты по выплатам</li>
+                </ul>
+                <p className="text-xs text-slate-500 pt-1 border-t border-slate-100">
+                  Формируются автоматически
+                </p>
+              </div>
+            </SoftCard>
+            <SoftCard>
+              <div className="p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-slate-500" aria-hidden />
+                  <span className="font-semibold text-slate-900">Отчёты УК</span>
+                </div>
+                <ul className="text-sm text-slate-600 space-y-1 list-disc list-inside">
+                  <li>аренда</li>
+                  <li>простой</li>
+                  <li>расходы и доход</li>
+                </ul>
+                <p className="text-xs text-slate-500 pt-1 border-t border-slate-100">
+                  Используются для расчёта выплат
+                </p>
+              </div>
+            </SoftCard>
+          </div>
+        </div>
+
+        {/* Как появляются документы — линейный процесс */}
         <SoftCard>
           <div className="p-6 space-y-4">
-            <div className="text-lg font-semibold text-slate-900">Новости</div>
-            {filteredNews.length === 0 ? (
-              <div className="text-sm text-slate-500">Нет новостей на выбранную дату</div>
-            ) : (
-              <div className="space-y-2">
-                {filteredNews.map((n) => (
-                  <div key={n.id} className="flex justify-between border-b border-slate-100 pb-2 text-sm">
-                    <span className="text-slate-800">{n.title}</span>
-                    <span className="text-slate-500">{n.date}</span>
+            <h2 className="text-lg font-semibold text-slate-900">Как появляются документы</h2>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              {processSteps.map((step, i) => (
+                <React.Fragment key={i}>
+                  <div className="flex items-center gap-2">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-slate-100 text-slate-700 text-xs font-medium flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <span className="text-sm text-slate-700">{step}</span>
                   </div>
-                ))}
-              </div>
-            )}
+                  {i < processSteps.length - 1 && (
+                    <ArrowRight className="hidden sm:block flex-shrink-0 h-4 w-4 text-slate-300" aria-hidden />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        </SoftCard>
+
+        {/* Блок доверия */}
+        <SoftCard className="border-blue-100 bg-blue-50/50">
+          <div className="p-6 flex gap-4">
+            <Shield className="h-8 w-8 text-blue-600 flex-shrink-0 mt-0.5" aria-hidden />
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-1">Основано на документах</h3>
+              <p className="text-sm text-slate-700">
+                Все выплаты, доли и расчёты в Betwix основаны на официальных документах и отчётности УК.
+                Это защищает владельца, инвесторов и платформу.
+              </p>
+            </div>
+          </div>
+        </SoftCard>
+
+        {/* Empty state — вместо таблицы */}
+        <SoftCard>
+          <div className="p-8 text-center space-y-4">
+            <div className="text-slate-400 mx-auto w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+              <FileText className="h-6 w-6" aria-hidden />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Документов пока нет</h3>
+              <p className="text-sm text-slate-600 mt-1 max-w-sm mx-auto">
+                Документы появятся после добавления первого объекта и запуска процесса инвестирования.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <Button
+                className="rounded-full bg-blue-600 hover:bg-blue-700"
+                onClick={onAddObject}
+              >
+                <Plus className="h-4 w-4 mr-1.5" aria-hidden />
+                Добавить объект
+              </Button>
+              <Button
+                variant="secondary"
+                className="rounded-full"
+                onClick={() => navigate("/owner/how-it-works")}
+              >
+                Как это работает
+              </Button>
+            </div>
           </div>
         </SoftCard>
       </div>
@@ -1448,99 +2352,228 @@ function NotificationsSection() {
   );
 }
 
-function DocumentsSection() {
+/** Format balance for display: 2 decimals, currency symbol. Same as header. */
+function formatBalanceDisplay(amount: number, currency: "USD" | "EUR"): string {
+  const symbol = currency === "USD" ? "$" : "€";
+  return `${symbol}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/** Лицевой счёт владельца: balance/available from context (0 when no objects). */
+function OwnerWalletCard() {
+  const { balance, available, currency } = useAuth();
   return (
-    <SectionShell
-      title="Документы"
-      subtitle="Юридические и финансовые документы по объектам"
-    >
-      <SoftCard>
-        <div className="overflow-auto rounded-xl border border-slate-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr className="text-left">
-                <th className="p-3">Документ</th>
-                <th className="p-3">Категория</th>
-                <th className="p-3">Объект</th>
-                <th className="p-3">Дата</th>
-                <th className="p-3">Действие</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_DOCS.map((d) => (
-                <tr key={d.id} className="border-t border-slate-100 hover:bg-slate-50/60 transition">
-                  <td className="p-3 font-medium text-slate-900">{d.title}</td>
-                  <td className="p-3">{d.category}</td>
-                  <td className="p-3">{d.object}</td>
-                  <td className="p-3">{d.date}</td>
-                  <td className="p-3">
-                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                      Скачать
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <SoftCard>
+      <div className="p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Wallet className="h-5 w-5 text-slate-500" aria-hidden />
+          <h2 className="text-lg font-semibold text-slate-900">Лицевой счёт владельца</h2>
         </div>
-      </SoftCard>
-    </SectionShell>
+        <div className="rounded-lg bg-slate-50 border border-slate-100 p-4 text-sm">
+          <div className="font-medium text-slate-700">Текущий баланс</div>
+          <div className="text-xl font-semibold text-slate-900 mt-1">{formatBalanceDisplay(balance, currency)}</div>
+          <p className="text-slate-500 mt-2">Отображается в разделе «Управление» по объектам</p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+          <div>
+            <div className="font-medium text-slate-700">Источники средств</div>
+            <div className="mt-1 text-slate-600">Ваша доля аренды, возвраты, корректировки</div>
+          </div>
+          <div>
+            <div className="font-medium text-slate-700">Куда направить</div>
+            <div className="mt-1 text-slate-600">Вывод на реквизиты, реинвест, выкуп долей</div>
+          </div>
+        </div>
+        <p className="text-sm text-amber-700/90 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          Средства от сбора средств с инвесторов не выводятся как кэш — они идут в объект.
+        </p>
+      </div>
+    </SoftCard>
   );
 }
+
+/* ------------------------------------------------------------------
+   Owner Control Panel — панель управления арендным бизнесом (Settings).
+   Не «профиль», а правила игры: доли, деньги, УК, уведомления, юридика.
+------------------------------------------------------------------ */
 
 function SettingsSection() {
   return (
     <SectionShell
-      title="Настройки"
-      subtitle="Профиль владельца, реквизиты и уведомления"
+      title="Панель управления"
+      subtitle="Контроль бизнес-модели, денег, УК и уведомлений"
     >
-      <div className="grid grid-cols-1 gap-4">
-        <SoftCard className="max-w-3xl">
+      <div className="grid grid-cols-1 gap-6 max-w-4xl">
+        {/* 1. Моя бизнес-модель */}
+        <SoftCard>
           <div className="p-6 space-y-4">
-            <div className="text-lg font-semibold text-slate-900">Профиль владельца</div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <Input className="h-10 bg-white border-slate-200" placeholder="Имя / Компания" defaultValue="John Doe Holdings" />
-              <Input className="h-10 bg-white border-slate-200" placeholder="Email" defaultValue="owner@betwix.io" />
-              <Input className="h-10 bg-white border-slate-200" placeholder="Телефон" defaultValue="+44 7700 900123" />
-              <Input className="h-10 bg-white border-slate-200" placeholder="Страна" defaultValue="United Kingdom" />
+            <div className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-slate-500" aria-hidden />
+              <h2 className="text-lg font-semibold text-slate-900">Моя бизнес-модель</h2>
             </div>
-            <Button className="rounded-full bg-blue-600 hover:bg-blue-700">Сохранить профиль</Button>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 text-sm">
+              <div>
+                <div className="font-medium text-slate-700">Доля, доступная к продаже</div>
+                <div className="mt-1 text-slate-600">10–30% от объекта — вы задаёте диапазон при запуске</div>
+              </div>
+              <div>
+                <div className="font-medium text-slate-700">Цель масштабирования</div>
+                <div className="mt-1 text-slate-600">Покупка следующего объекта, реинвест в текущий</div>
+              </div>
+            </div>
+            <p className="text-sm text-slate-500 border-l-2 border-slate-200 pl-3">
+              Это не кредит и не продажа собственности: вы остаётесь владельцем, инвесторы получают долю в доходах.
+            </p>
           </div>
         </SoftCard>
 
-        <SoftCard className="max-w-3xl">
+        {/* 2. Деньги и распределение дохода */}
+        <SoftCard>
           <div className="p-6 space-y-4">
-            <div className="text-lg font-semibold text-slate-900">Реквизиты для выплат</div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <Input className="h-10 bg-white border-slate-200" placeholder="Банк" defaultValue="Barclays" />
-              <Input className="h-10 bg-white border-slate-200" placeholder="IBAN / Account" defaultValue="GB29NWBK60161331926819" />
-              <Input className="h-10 bg-white border-slate-200" placeholder="SWIFT / BIC" defaultValue="NWBKGB2L" />
-              <Input className="h-10 bg-white border-slate-200" placeholder="Валюта" defaultValue="USD" />
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-slate-500" aria-hidden />
+              <h2 className="text-lg font-semibold text-slate-900">Деньги и распределение дохода</h2>
             </div>
-            <Button className="rounded-full bg-blue-600 hover:bg-blue-700">Обновить реквизиты</Button>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 text-sm">
+              <div>
+                <div className="font-medium text-slate-700">Ваша доля vs доля инвесторов</div>
+                <div className="mt-1 text-slate-600">Распределение задаётся при создании объекта и отображается в карточке объекта</div>
+              </div>
+              <div>
+                <div className="font-medium text-slate-700">Принцип распределения</div>
+                <div className="mt-1 text-slate-600">После удержаний УК и платформы — пропорционально долям</div>
+              </div>
+            </div>
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <div className="text-sm font-medium text-slate-700">Настройки</div>
+              <ul className="text-sm text-slate-600 space-y-1 list-disc list-inside">
+                <li>Вывод дохода на счёт или использование внутри Betwix</li>
+                <li>Приоритет: реинвест в объект / выкуп долей / вывод</li>
+              </ul>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Button variant="secondary" size="sm" className="rounded-full">Настроить вывод</Button>
+                <Button variant="secondary" size="sm" className="rounded-full">Приоритет использования</Button>
+              </div>
+            </div>
           </div>
         </SoftCard>
 
-        <SoftCard className="max-w-3xl">
+        {/* 3. Лицевой счёт владельца — balance/available from context (0 when no objects) */}
+        <OwnerWalletCard />
+
+        {/* 4. Управляющая компания */}
+        <SoftCard>
           <div className="p-6 space-y-4">
-            <div className="text-lg font-semibold text-slate-900">Уведомления</div>
-            <div className="space-y-2 text-sm text-slate-700">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" defaultChecked /> Зачисление аренды
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" defaultChecked /> Просрочки платежей
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" defaultChecked /> Отчёты УК
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" /> Маркетинговые обновления
-              </label>
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-slate-500" aria-hidden />
+              <h2 className="text-lg font-semibold text-slate-900">Управляющая компания (УК)</h2>
             </div>
-            <Button variant="secondary" className="rounded-full">
-              Сохранить настройки
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium text-slate-800">Название УК</span>
+              <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-50">Verified</Badge>
+            </div>
+            <p className="text-sm text-slate-600">
+              УК ведёт объект: аренда, эксплуатация, отчётность. Вы получаете данные и контроль без операционки.
+            </p>
+            <div className="text-sm">
+              <div className="font-medium text-slate-700">Какие данные передаёт УК</div>
+              <ul className="mt-1 text-slate-600 list-disc list-inside space-y-0.5">
+                <li>Доход и простой</li>
+                <li>Отчёты и документы</li>
+              </ul>
+            </div>
+            <div className="pt-2 border-t border-slate-100">
+              <div className="text-sm font-medium text-slate-700 mb-2">Уведомления от УК</div>
+              <div className="flex flex-wrap gap-2">
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" defaultChecked className="rounded border-slate-300" /> Отчёты
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" defaultChecked className="rounded border-slate-300" /> Простой и инциденты
+                </label>
+              </div>
+            </div>
+          </div>
+        </SoftCard>
+
+        {/* 5. Доли и P2P-рынок */}
+        <SoftCard>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-slate-500" aria-hidden />
+              <h2 className="text-lg font-semibold text-slate-900">Доли и P2P-рынок</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 text-sm">
+              <div>
+                <div className="font-medium text-slate-700">Что могут инвесторы</div>
+                <div className="mt-1 text-slate-600">Покупать и продавать доли на вторичном рынке, получать долю дохода</div>
+              </div>
+              <div>
+                <div className="font-medium text-slate-700">Что можете вы</div>
+                <div className="mt-1 text-slate-600">Выкупать доли у инвесторов, задавать правила ликвидности</div>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-slate-100">
+              <div className="text-sm font-medium text-slate-700 mb-2">Выкуп долей</div>
+              <div className="flex flex-wrap gap-2">
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input type="radio" name="buyback" defaultChecked className="border-slate-300" /> Ручной
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input type="radio" name="buyback" className="border-slate-300" /> Автоматический при предложении
+                </label>
+              </div>
+            </div>
+          </div>
+        </SoftCard>
+
+        {/* 6. Уведомления — только бизнес-события */}
+        <SoftCard>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-slate-500" aria-hidden />
+              <h2 className="text-lg font-semibold text-slate-900">Уведомления</h2>
+            </div>
+            <p className="text-sm text-slate-600">Только бизнес-события. Без маркетинга.</p>
+            <div className="space-y-2 text-sm">
+              {[
+                "Простой объекта",
+                "Отклонение доходности от плана",
+                "Отчёты УК",
+                "Продажа долей инвесторами",
+                "Возможность выкупа долей",
+                "Готовность к покупке нового объекта",
+              ].map((label, i) => (
+                <label key={i} className="flex items-center gap-2 text-slate-700">
+                  <input type="checkbox" defaultChecked className="rounded border-slate-300" />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <Button variant="secondary" size="sm" className="rounded-full">Сохранить уведомления</Button>
+          </div>
+        </SoftCard>
+
+        {/* 7. Правила и юридика — инфо-блок */}
+        <SoftCard>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Scale className="h-5 w-5 text-slate-500" aria-hidden />
+              <h2 className="text-lg font-semibold text-slate-900">Правила и юридика</h2>
+            </div>
+            <p className="text-sm text-slate-600">
+              Короткие принципы: вы владеете объектом, инвесторы — долями в доходах. УК управляет операционкой. Платформа обеспечивает учёт и распределение.
+            </p>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <Link to="/owner/how-it-works" className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">
+                Как это работает
+              </Link>
+              <a href="#" className="text-sm font-medium text-slate-600 hover:text-slate-700 hover:underline">
+                Условия
+              </a>
+              <a href="#" className="text-sm font-medium text-slate-600 hover:text-slate-700 hover:underline">
+                Роль УК
+              </a>
+            </div>
           </div>
         </SoftCard>
       </div>

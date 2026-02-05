@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Star, Home, Building, Briefcase, Store, Warehouse } from "lucide-react";
 import {
   TableCell,
@@ -54,7 +55,17 @@ export function LotTableRow({
   compactYieldColumn = false,
 }: LotTableRowProps) {
   const navigate = useNavigate();
+  const { isAuthenticated, openAuthModal } = useAuth();
   const pct = progressPct(l.raiseCollected, l.raiseTarget);
+
+  const handleInvestClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      openAuthModal();
+    } else {
+      navigate(`/object/${l.id}`, { state: { listing: l } });
+    }
+  };
   const yieldPct = ((l.rentYearly / l.businessValue) * 100).toFixed(1);
   const coeff = 1 + l.salePercent / 100;
   let arrow = "▼";
@@ -157,7 +168,7 @@ export function LotTableRow({
             size="sm"
             variant="outline"
             className="btn-invest h-6 rounded-full px-2 text-xs text-blue-500 border-blue-500 hover:bg-transparent hover:underline shadow-none"
-            onClick={() => navigate(`/object/${l.id}`, { state: { listing: l } })}
+            onClick={handleInvestClick}
           >
             Инвестировать
           </Button>

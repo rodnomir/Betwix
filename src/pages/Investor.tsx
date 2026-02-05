@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Home,
   Search,
@@ -16,6 +16,7 @@ import {
   Flame,
 } from "lucide-react";
 
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -430,15 +431,24 @@ function ReportStatusPill({ v }: { v: ReportRow["status"] }) {
 
 // ================= main =================
 export default function InvestorCabinetPreview() {
+  const { currency, setCurrency, setUserFinancials } = useAuth();
   const [cabinetTab, setCabinetTab] = useState<CabinetTab>("portfolio");
   const [openAsset, setOpenAsset] = useState<HoldingRow | null>(null);
 
-  const [currency, setCurrency] = useState<"USD" | "EUR">("USD");
   const [region, setRegion] = useState<Region>("Все регионы");
   const [type] = useState<AssetType>("Все типы");
   const [onlyDiscount, setOnlyDiscount] = useState(false);
   const [hiLiq, setHiLiq] = useState(false);
   const [q, setQ] = useState("");
+
+  useEffect(() => {
+    setUserFinancials({
+      balanceUsd: ACCOUNT.balanceUsd,
+      availableUsd: ACCOUNT.availableUsd,
+      balanceEur: ACCOUNT.balanceEur,
+      availableEur: ACCOUNT.availableEur,
+    });
+  }, [setUserFinancials]);
 
   const fx = useMemo(() => ACCOUNT.balanceEur / ACCOUNT.balanceUsd, []);
 

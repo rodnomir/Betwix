@@ -3,7 +3,7 @@ import * as React from "react";
 // Кнопка с вариантами размеров и стилей (совместимость с shadcn/ui)
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "secondary" | "outline" | "ghost" | "link";
+  variant?: "default" | "primary" | "secondary" | "outline" | "ghost" | "link";
   size?: "default" | "sm" | "lg" | "icon";
 }
 
@@ -11,6 +11,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = "", variant = "default", size = "default", ...props }, ref) => {
     const variantClasses = {
       default: "bg-slate-900 text-slate-50 hover:bg-slate-800",
+      primary: "bg-blue-600 text-white hover:bg-blue-700",
       secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200",
       outline: "border border-[#DDE2E8] bg-white hover:bg-slate-50 hover:text-slate-900",
       ghost: "hover:bg-slate-100 hover:text-slate-900",
