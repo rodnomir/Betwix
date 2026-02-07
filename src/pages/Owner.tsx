@@ -9,7 +9,6 @@ import {
   ArrowUpRight,
   Bell,
   Building2,
-  CalendarDays,
   CheckCircle,
   DollarSign,
   FileText,
@@ -147,7 +146,7 @@ type OtherMgmtItem = {
   specialization?: string;
 };
 
-type NotificationItem = {
+export type NotificationItem = {
   id: string;
   type: EventTone;
   title: string;
@@ -155,7 +154,7 @@ type NotificationItem = {
   date: string;
 };
 
-type DocItem = {
+export type DocItem = {
   id: string;
   title: string;
   category: string;
@@ -243,64 +242,32 @@ function pill(text: string) {
   );
 }
 
-function NewsEventsSidebar({ onNavigate }: { onNavigate: (s: Section) => void }) {
-  const [tab, setTab] = useState<"news" | "events">("news");
-  const newsCount = MOCK_NEWS.length;
-  const eventsCount = MOCK_EVENTS.length;
-
-  return (
-    <SoftCard>
-      <div className="p-4">
-        <div className="flex gap-4 border-b border-slate-100 pb-1.5">
-          <NavItemUnderline active={tab === "news"} onClick={() => setTab("news")} paddingClass="pb-1">
-            <span className="text-sm">Новости</span>
-            <span className="ml-1 text-xs font-normal text-slate-400">({newsCount})</span>
-          </NavItemUnderline>
-          <NavItemUnderline active={tab === "events"} onClick={() => setTab("events")} paddingClass="pb-1">
-            <span className="text-sm">События</span>
-            <span className="ml-1 text-xs font-normal text-slate-400">({eventsCount})</span>
-          </NavItemUnderline>
-        </div>
-
-        <div className="max-h-[240px] overflow-y-auto space-y-2 pt-2">
-          {tab === "news" &&
-            MOCK_NEWS.map((n) => (
-              <div key={n.id} className="border-b border-slate-100 pb-2 last:border-0 last:pb-0">
-                <div className="text-sm font-semibold text-slate-900">{n.title}</div>
-                {n.description ? (
-                  <div className="mt-0.5 text-xs text-slate-500 line-clamp-2">{n.description}</div>
-                ) : null}
-                <div className="mt-0.5 text-xs text-slate-500">
-                  {formatDateDisplay(n.date)}
-                  {n.source ? ` · ${n.source}` : ""}
-                </div>
-              </div>
-            ))}
-          {tab === "events" &&
-            MOCK_EVENTS.map((e, i) => (
-              <div key={i} className="border-b border-slate-100 pb-2 last:border-0 last:pb-0">
-                <div className="text-sm font-semibold text-slate-900">{e.title}</div>
-                <div className="mt-0.5 text-xs text-slate-500 line-clamp-2">{e.text}</div>
-                <div className="mt-0.5 flex items-center justify-between gap-2">
-                  <span className="text-xs text-slate-500">
-                    {e.date ? formatDateDisplay(e.date) : "—"} · {e.source ?? "УК"}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto px-0 text-xs text-blue-600 hover:text-blue-700"
-                    onClick={() => onNavigate(e.to)}
-                  >
-                    {e.cta}
-                  </Button>
-                </div>
-              </div>
-            ))}
-        </div>
-      </div>
-    </SoftCard>
-  );
-}
+// NewsEventsSidebar — unused, kept for potential future use
+// function NewsEventsSidebar({ onNavigate }: { onNavigate: (s: Section) => void }) {
+//   const [tab, setTab] = useState<"news" | "events">("news");
+//   const newsCount = MOCK_NEWS.length;
+//   const eventsCount = MOCK_EVENTS.length;
+//   return (
+//     <SoftCard>
+//       <div className="p-4">
+//         <div className="flex gap-4 border-b border-slate-100 pb-1.5">
+//           <NavItemUnderline active={tab === "news"} onClick={() => setTab("news")} paddingClass="pb-1">
+//             <span className="text-sm">Новости</span>
+//             <span className="ml-1 text-xs font-normal text-slate-400">({newsCount})</span>
+//           </NavItemUnderline>
+//           <NavItemUnderline active={tab === "events"} onClick={() => setTab("events")} paddingClass="pb-1">
+//             <span className="text-sm">События</span>
+//             <span className="ml-1 text-xs font-normal text-slate-400">({eventsCount})</span>
+//           </NavItemUnderline>
+//         </div>
+//         <div className="max-h-[240px] overflow-y-auto space-y-2 pt-2">
+//           {tab === "news" && MOCK_NEWS.map((n) => (...))}
+//           {tab === "events" && MOCK_EVENTS.map((e, i) => (...))}
+//         </div>
+//       </div>
+//     </SoftCard>
+//   );
+// }
 
 function SoftCard({
   children,
@@ -358,9 +325,6 @@ const MOCK_ACCOUNT_EUR = {
   available: 8200,
   rentDelta: 320,
 };
-
-/** @deprecated Use MOCK_ACCOUNT_EUR for owner balance logic. Kept for non-balance usage. */
-const MOCK_ACCOUNT = MOCK_ACCOUNT_EUR;
 
 type SummaryData = {
   grossRent: number;
@@ -699,30 +663,6 @@ const MOCK_OTHER_MGMT: OtherMgmtItem[] = [
   { id: "om3", name: "Regional Partners", status: "in_review", specialization: "Мультикласс" },
 ];
 
-const MOCK_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "a1",
-    type: "danger",
-    title: "Просрочка аренды",
-    text: "RE-OF-03 · Canary Wharf · $1,800",
-    date: "2026-01-20",
-  },
-  {
-    id: "a2",
-    type: "warning",
-    title: "Отчёт УК не загружен",
-    text: "GreenStone · Январь 2026",
-    date: "2026-01-18",
-  },
-  {
-    id: "a3",
-    type: "info",
-    title: "Ожидает вывод владельцу",
-    text: "Выплата $15,000 · Pending",
-    date: "2026-01-15",
-  },
-];
-
 // Единая лента для раздела Уведомления (business news feed)
 type FeedItemType = "event" | "news" | "personal";
 type FeedImportance = "Critical" | "Warning" | "Info";
@@ -808,30 +748,6 @@ const MOCK_FEED: FeedItem[] = [
     mgmt: "Платформа Betwix",
     date: "2026-01-08",
     actions: [],
-  },
-];
-
-const MOCK_DOCS: DocItem[] = [
-  {
-    id: "doc-1",
-    title: "Отчёт УК · Январь 2026",
-    category: "Отчёт УК",
-    object: "RE-OF-03",
-    date: "2026-02-05",
-  },
-  {
-    id: "doc-2",
-    title: "Договор управления · GreenStone",
-    category: "Договор",
-    object: "Все объекты",
-    date: "2025-11-12",
-  },
-  {
-    id: "doc-3",
-    title: "Акт распределения дохода · Январь",
-    category: "Финансы",
-    object: "RE-COM-07",
-    date: "2026-02-07",
   },
 ];
 
@@ -2307,7 +2223,7 @@ function formatBalanceDisplay(amount: number, currency: "USD" | "EUR"): string {
 
 /** Лицевой счёт владельца: balance/available from context (0 when no objects). */
 function OwnerWalletCard() {
-  const { balance, available, currency } = useAuth();
+  const { balance, currency } = useAuth();
   return (
     <SoftCard>
       <div className="p-6 space-y-4">
@@ -2527,6 +2443,8 @@ function SettingsSection() {
     </SectionShell>
   );
 }
+
+export { MOCK_EVENTS, MOCK_NEWS };
 
 /* ------------------------------------------------------------------
    Unused icons in this file are intentionally kept imported for quick UI tweaks

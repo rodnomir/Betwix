@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import PageContainer from "@/components/PageContainer";
 import RevenueModelSection from "@/components/RevenueModelSection";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 const FAQ_ITEMS: { question: string; answer: string }[] = [
