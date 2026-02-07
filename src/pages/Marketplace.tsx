@@ -1042,12 +1042,6 @@ export default function P2PMarketPage() {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="mt-10 border-t border-slate-200 pt-6 pb-10 text-sm text-slate-500 flex items-center justify-between">
-          <div>© Betwix, 2026</div>
-          <div className="hidden md:block">Документы · Правила · Политика конфиденциальности</div>
-          <div>Support</div>
-        </div>
       </PageContainer>
       </div>
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} item={selected} currency={currency} />

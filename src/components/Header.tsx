@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { navItemUnderlineStyles } from "@/components/NavItemUnderline";
 
 type HeaderProps = {
   onLoginClick?: () => void;
@@ -30,13 +31,9 @@ export default function Header({ onLoginClick }: HeaderProps) {
   }: {
     isActive: boolean;
     isPending: boolean;
-  }) =>
-    "group relative block pb-1 font-medium transition-colors " +
-    (isActive ? "text-blue-600" : "text-slate-800 hover:text-blue-600");
+  }) => navItemUnderlineStyles.container + navItemUnderlineStyles.text(isActive);
 
-  const underlineClass = (isActive: boolean) =>
-    "absolute left-1/2 -translate-x-1/2 -bottom-0.5 h-0.5 rounded-full bg-blue-500 transition-all duration-200 ease-out " +
-    (isActive ? "w-full" : "w-0 group-hover:w-full");
+  const underlineClass = (isActive: boolean) => navItemUnderlineStyles.line(isActive);
 
   const handleLogout = () => {
     setRole(null);
