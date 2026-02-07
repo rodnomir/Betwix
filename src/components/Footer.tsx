@@ -15,7 +15,7 @@ export default function Footer() {
             <li><Link to="/lots" className="hover:text-slate-700">Лоты</Link></li>
             <li><Link to="/p2p" className="hover:text-slate-700">P2P рынок</Link></li>
             <li><Link to="/how-it-works" className="hover:text-slate-700">Как это работает</Link></li>
-            <li><Link to="/market-news" className="hover:text-slate-700">Новости рынка</Link></li>
+            <li><Link to="/news" className="hover:text-slate-700">Новости рынка</Link></li>
           </ul>
         </div>
         <div>
@@ -38,7 +38,16 @@ export default function Footer() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-[#E5E7EB] py-4 text-center text-xs text-slate-400">© 2026 Betwix. Все права защищены</div>
+      <div className="border-t border-[#E5E7EB] px-6 py-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-500">
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link to="/terms" className="hover:text-slate-700">Условия обслуживания</Link>
+            <Link to="/privacy" className="hover:text-slate-700">Политика конфиденциальности</Link>
+            <Link to="/cookies" className="hover:text-slate-700">Cookies</Link>
+          </div>
+          <div className="text-slate-400">© 2026 Betwix. Все права защищены</div>
+        </div>
+      </div>
     </footer>
   );
 }

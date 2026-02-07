@@ -11,9 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Star, Home, Building, Briefcase, Store, Warehouse } from "lucide-react";
+import { Star, Home, Building, Briefcase, Store, Warehouse, ArrowUp, ArrowDown } from "lucide-react";
 import PageContainer from "@/components/PageContainer";
 import SubTabs, { SubTabsSection } from "@/components/SubTabs";
+import { demoCountryIndex, formatPricePerM2 } from "@/data/newsMarket";
 
 /**
  * Betwix — Главная Страница Лотов (MVP)
@@ -27,6 +28,12 @@ import SubTabs, { SubTabsSection } from "@/components/SubTabs";
 // -----------------------------
 
 import { DEMO_LISTINGS, type Listing } from "@/data/demoListings";
+
+/** ISO-2 → flag emoji for market index */
+const COUNTRY_FLAG: Record<string, string> = {
+  DE: "🇩🇪", PL: "🇵🇱", SK: "🇸🇰", CZ: "🇨🇿", AT: "🇦🇹",
+  HU: "🇭🇺", RO: "🇷🇴", ES: "🇪🇸", IT: "🇮🇹",
+};
 
 // -----------------------------
 // Regions + Flags
@@ -136,6 +143,7 @@ export default function BetwixMarketplacePage() {
   const [dataSource, setDataSource] = useState<"aggregated" | "reit" | "rent">("aggregated");
   const [countryFilter, setCountryFilter] = useState<string | "all">("all");
   const [showAllCountries, setShowAllCountries] = useState(false);
+  const [indexTickerPaused, setIndexTickerPaused] = useState(false);
 
   const topCountries = useMemo(() => {
     if (regionFilter === "all") return [];
@@ -231,6 +239,45 @@ export default function BetwixMarketplacePage() {
       <SubTabsSection>
         <SubTabs active={dataSource} onChange={(v) => setDataSource(v as "aggregated" | "reit" | "rent")} />
       </SubTabsSection>
+
+      {/* Market Index — same motion as news ticker: 30s marquee, pause on hover, no motion on mobile */}
+      <div
+        className="overflow-x-auto md:overflow-x-hidden overflow-y-hidden py-1.5 mb-3"
+        onMouseEnter={() => setIndexTickerPaused(true)}
+        onMouseLeave={() => setIndexTickerPaused(false)}
+      >
+        <div
+          className={`flex items-start gap-5 w-max ${!indexTickerPaused ? "index-ticker-motion" : ""}`}
+        >
+          {[...demoCountryIndex.slice(0, 8), ...demoCountryIndex.slice(0, 8)].map((item, i) => {
+            const indexDate = new Date().toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" });
+            const flag = COUNTRY_FLAG[item.code] ?? "";
+            const pctStr = item.deltaPct >= 0
+              ? `+${item.deltaPct.toLocaleString("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
+              : `${item.deltaPct.toLocaleString("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+            return (
+              <div key={`${item.code}-${i}`} className="shrink-0 flex flex-col leading-tight">
+                <div className="text-xs">
+                  <span>{flag}</span> <span className="text-slate-700">{item.code}</span>  <span className="text-slate-400 tabular-nums">{indexDate}</span>
+                </div>
+                <div className="mt-0.5 flex items-baseline gap-1.5">
+                  <span className="text-sm font-medium text-slate-900 tabular-nums">
+                    {formatPricePerM2(item.pricePerM2)}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-0.5 text-xs font-medium tabular-nums ${
+                      item.deltaPct >= 0 ? "text-emerald-600" : "text-red-600"
+                    }`}
+                  >
+                    {item.deltaPct >= 0 ? <ArrowUp className="h-3 w-3" aria-hidden /> : <ArrowDown className="h-3 w-3" aria-hidden />}
+                    {pctStr}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Content */}
       <div className="pt-0 pb-6">
@@ -412,6 +459,11 @@ export default function BetwixMarketplacePage() {
           }
           .animate-marquee {
             animation: marquee 30s linear infinite;
+          }
+          @media (min-width: 768px) {
+            .index-ticker-motion {
+              animation: marquee 30s linear infinite;
+            }
           }
         `}</style>
         <div className="mt-3 overflow-hidden rounded-xl border bg-slate-50">

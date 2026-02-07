@@ -10,7 +10,6 @@ import Owner from "./pages/Owner";
 import OwnerObjectPage from "./pages/OwnerObjectPage";
 import ObjectPage from "./pages/ObjectPage";
 import HowItWorks from "./pages/HowItWorks";
-import MarketNews from "./pages/MarketNews";
 import About from "./pages/About";
 import HowWeEarn from "./pages/HowWeEarn";
 import RatingMethodology from "./pages/RatingMethodology";
@@ -20,6 +19,11 @@ import Faq from "./pages/Faq";
 import Contacts from "./pages/Contacts";
 import Support from "./pages/Support";
 import ForManagementCompanies from "./pages/ForManagementCompanies";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import Cookies from "./pages/Cookies";
+import News from "./pages/News";
+import NewsDetail from "./pages/NewsDetail";
 
 function AppContent() {
   const { isModalOpen, closeAuthModal } = useAuth();
@@ -33,7 +37,6 @@ function AppContent() {
             <Route path="/p2p" element={<Marketplace />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/market-news" element={<MarketNews />} />
             <Route path="/about" element={<About />} />
             <Route path="/how-we-earn" element={<HowWeEarn />} />
             <Route path="/rating-methodology" element={<RatingMethodology />} />
@@ -43,6 +46,11 @@ function AppContent() {
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/support" element={<Support />} />
             <Route path="/for-management-companies" element={<ForManagementCompanies />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/cookies" element={<Cookies />} />
+            <Route path="/news" element={<News />} />
+            <Route path="/news/:slug" element={<NewsDetail />} />
             <Route path="/object/:id" element={<ObjectPage />} />
             <Route path="/investor" element={<Investor />} />
             <Route path="/owner" element={<Owner />} />
